@@ -6,6 +6,12 @@ import { promisify } from 'node:util';
 import { MetricsStore } from './metrics-store.js';
 import type { ToolMetric } from './types.js';
 
+interface TokenInfo {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 const execAsync = promisify(exec);
 
 export interface ShimConfig {
@@ -76,6 +82,17 @@ export class ShimManager {
     'node',
     'npm',
     'bun', // We'll handle these specially if needed
+    // Noisy claude invocations (claude likes to use these behind the scenes and they're not very useful to track)
+    'tail',
+    'head',
+    'sort',
+    'uniq',
+    'base64',
+    'sed',
+    'grep',
+    'awk',
+    'uname',
+    'tr',
   ]);
 
   constructor(metricsStore: MetricsStore, baseDir?: string) {
@@ -225,8 +242,8 @@ export class ShimManager {
 # Claude Code Metrics Shim for ${executable}
 # Generated on ${new Date().toISOString()}
 
-# Collect metrics
-node "${metricsCollectorPath}" "${executable}" "${originalPath}" "$@"
+# Collect metrics (pass debug flag if present)
+node $DEBUG_FLAG "${metricsCollectorPath}" "${executable}" "${originalPath}" "$@"
 `;
   }
 
@@ -353,72 +370,7 @@ exec "\$CLAUDE_CODE_PATH" "\$@"
 `;
 
     await fs.writeFile(wrapperPath, wrapperScript, { mode: 0o755 });
-
-    console.log(`\\n✅ Created Claude Code wrapper: ${wrapperPath}`);
-    console.log('\\n🚀 To use Claude Code with metrics collection:');
-    console.log(`   ${wrapperPath}`);
-    console.log('\\n💡 Or create an alias in your shell:');
-    console.log(`   alias claude-code-metrics="${wrapperPath}"`);
-    console.log('\\n🔒 Your system PATH remains completely untouched!');
-  }
-
-  private async detectShell(): Promise<string> {
-    const shell = process.env.SHELL || '/bin/bash';
-    if (shell.includes('zsh')) return '.zshrc';
-    if (shell.includes('fish')) return '.config/fish/config.fish';
-    if (shell.includes('bash')) return '.bashrc';
-    return '.profile';
-  }
-
-  async uninstallShims(): Promise<void> {
-    try {
-      const configData = await fs.readFile(this.configFile, 'utf-8');
-      const config: ShimConfig[] = JSON.parse(configData);
-
-      for (const shim of config) {
-        if (shim.enabled && shim.shimPath) {
-          await fs.unlink(shim.shimPath);
-          console.log(`Removed shim: ${shim.shimPath}`);
-        }
-      }
-
-      // Remove Claude Code wrapper
-      const wrapperPath = path.join(path.dirname(this.shimDir), 'claude-code-with-metrics');
-      try {
-        await fs.unlink(wrapperPath);
-        console.log(`Removed Claude Code wrapper: ${wrapperPath}`);
-      } catch {
-        // Wrapper might not exist
-      }
-
-      // Remove entire metrics directory
-      try {
-        await fs.rm(path.dirname(this.shimDir), { recursive: true, force: true });
-        console.log(`Removed metrics directory: ${path.dirname(this.shimDir)}`);
-      } catch (error) {
-        console.warn(
-          'Could not remove metrics directory:',
-          error instanceof Error ? error.message : String(error)
-        );
-      }
-
-      console.log('\\n✅ All shims removed successfully!');
-      console.log('🔒 Your system environment was never modified.');
-    } catch (error) {
-      console.warn(
-        'Failed to read shim configuration:',
-        error instanceof Error ? error.message : String(error)
-      );
-    }
-  }
-
-  async getShimStatus(): Promise<ShimConfig[]> {
-    try {
-      const configData = await fs.readFile(this.configFile, 'utf-8');
-      return JSON.parse(configData);
-    } catch {
-      return [];
-    }
+    console.log('🔒 Your system PATH remains completely untouched!');
   }
 }
 
@@ -466,6 +418,9 @@ export async function collectAndExecute(
     const endTime = process.hrtime.bigint();
     const duration = Number(endTime - startTime) / 1_000_000;
 
+    // Extract token information from output
+    const tokens = extractTokensFromOutput(executable, result.stdout, result.stderr, args);
+
     // Save metrics
     await saveMetric({
       id: metricId,
@@ -477,9 +432,9 @@ export async function collectAndExecute(
       errorMessage: result.code !== 0 ? `Exit code: ${result.code}` : undefined,
       parameters: { args, cwd: process.cwd() },
       timestamp: new Date(),
-      inputTokens: 0, // Not applicable for raw executables
-      outputTokens: 0,
-      totalTokens: 0,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+      totalTokens: tokens.totalTokens,
     });
 
     process.exit(result.code);
@@ -509,13 +464,49 @@ export async function collectAndExecute(
   }
 }
 
+function estimateTokens(text: string): number {
+  // Fast token estimation using character count with typical token-to-char ratio
+  // GPT-style models: ~4 characters per token on average
+  // This is a rough approximation but very fast
+  return Math.ceil(text.length / 4);
+}
+
+function extractTokensFromOutput(
+  executable: string,
+  stdout: string,
+  stderr: string,
+  args: string[]
+): TokenInfo {
+  // For tool execution, we estimate tokens from the actual output
+  // Input tokens = command + args (what was "sent" to the tool)
+  // Output tokens = stdout + stderr (what the tool "generated")
+
+  const outputTokens = estimateTokens(stdout + stderr);
+
+  // Input tokens = executable name + all arguments
+  const inputText = `${executable} ${args.join(' ')}`;
+  const inputTokens = estimateTokens(inputText);
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+  };
+}
+
 async function saveMetric(metric: ToolMetric): Promise<void> {
+  console.debug('[ShimManager] Starting to save metric for:', metric.toolName);
+
   try {
     const metricsStore = new MetricsStore();
-    metricsStore.saveMetric(metric);
+    await metricsStore.saveMetric(metric);
     metricsStore.close();
+
+    console.debug('[ShimManager] Successfully saved metric for:', metric.toolName);
   } catch (error) {
     // Don't fail the command if metrics collection fails
     console.warn('Failed to save metrics:', error instanceof Error ? error.message : String(error));
+
+    console.debug('[ShimManager] Error details:', error);
   }
 }

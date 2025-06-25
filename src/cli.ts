@@ -15,9 +15,9 @@ program
   .command('summary')
   .description('Show summary of tool execution metrics')
   .option('-l, --limit <number>', 'Limit number of tools shown', '10')
-  .action((options) => {
+  .action(async (options) => {
     const store = new MetricsStore();
-    const summary = store.getMetricsSummary();
+    const summary = await store.getMetricsSummary();
     const limit = Number.parseInt(options.limit);
 
     console.log('Tool Execution Summary');
@@ -52,7 +52,7 @@ program
 
     // Show token breakdown
     console.log();
-    console.log('Token Usage Breakdown');
+    console.log('Token Usage Breakdown (Estimated)');
     console.log('====================');
     console.log();
 
@@ -76,9 +76,9 @@ program
   .command('recent')
   .description('Show recent tool executions')
   .option('-l, --limit <number>', 'Number of recent executions to show', '20')
-  .action((options) => {
+  .action(async (options) => {
     const store = new MetricsStore();
-    const recent = store.getRecentMetrics(Number.parseInt(options.limit));
+    const recent = await store.getRecentMetrics(Number.parseInt(options.limit));
 
     console.log('Recent Tool Executions');
     console.log('======================');

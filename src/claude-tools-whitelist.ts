@@ -70,18 +70,10 @@ export const CLAUDE_TOOLS_WHITELIST = [
   'rmdir',
 
   // Text processing
-  'grep',
-  'sed',
-  'awk',
-  'sort',
-  'uniq',
-  'head',
-  'tail',
   'cat',
   'less',
   'more',
   'wc',
-  'tr',
   'rg',
 
   // System information
@@ -93,7 +85,6 @@ export const CLAUDE_TOOLS_WHITELIST = [
   'df',
   'free',
   'uptime',
-  'uname',
 
   // Network tools
   'ping',
@@ -122,7 +113,6 @@ export const CLAUDE_TOOLS_WHITELIST = [
   'jq',
   'yq',
   'xmllint',
-  'base64',
   'openssl',
 
   // Cloud CLI tools

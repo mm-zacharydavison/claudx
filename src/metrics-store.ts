@@ -1,21 +1,41 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
+import initSqlJs, { type Database } from 'sql.js';
 import type { MetricsSummary, ToolMetric } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export class MetricsStore {
-  private db: Database.Database;
+  private db?: Database;
+  private dbPath: string;
+  private dbPromise: Promise<void>;
 
   constructor(dbPath?: string) {
-    const defaultPath = path.join(__dirname, '..', 'metrics.db');
-    this.db = new Database(dbPath || defaultPath);
-    this.initializeSchema();
+    this.dbPath = dbPath || path.join(__dirname, '..', 'metrics.db');
+    this.dbPromise = this.initializeDatabase();
+
+    console.debug('[MetricsStore] Initializing with database path:', this.dbPath);
   }
 
-  private initializeSchema() {
+  private async initializeDatabase(): Promise<void> {
+    console.debug('[MetricsStore] Initializing SQLite database...');
+
+    const SQL = await initSqlJs();
+
+    // Load existing database or create new one
+    let dbData: Uint8Array | undefined;
+    if (existsSync(this.dbPath)) {
+      dbData = readFileSync(this.dbPath);
+      console.debug('[MetricsStore] Loaded existing database file, size:', dbData.length, 'bytes');
+    } else {
+      console.debug('[MetricsStore] Creating new database file');
+    }
+
+    this.db = new SQL.Database(dbData);
+
+    // Initialize schema
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS tool_metrics (
         id TEXT PRIMARY KEY,
@@ -35,16 +55,48 @@ export class MetricsStore {
       CREATE INDEX IF NOT EXISTS idx_tool_name ON tool_metrics(tool_name);
       CREATE INDEX IF NOT EXISTS idx_timestamp ON tool_metrics(timestamp);
     `);
+
+    console.debug('[MetricsStore] Database schema initialized successfully');
   }
 
-  saveMetric(metric: ToolMetric): void {
+  private saveDatabase(): void {
+    if (!this.db) {
+      return;
+    }
+    const data = this.db.export();
+    console.debug('[MetricsStore] Exporting database, size:', data.length, 'bytes');
+    writeFileSync(this.dbPath, data);
+    console.debug('[MetricsStore] Database file written successfully');
+  }
+
+  async saveMetric(metric: ToolMetric): Promise<void> {
+    console.debug('[MetricsStore] Saving metric for tool:', metric.toolName);
+    console.debug('[MetricsStore] Metric data:', {
+      id: metric.id,
+      toolName: metric.toolName,
+      duration: metric.duration,
+      success: metric.success,
+      timestamp: metric.timestamp.toISOString(),
+      inputTokens: metric.inputTokens,
+      outputTokens: metric.outputTokens,
+      totalTokens: metric.totalTokens,
+      errorMessage: metric.errorMessage,
+      parameters: metric.parameters,
+    });
+
+    await this.dbPromise;
+
+    if (!this.db) {
+      throw new Error('[MetricsStore] "db" not initialized.');
+    }
+
     const stmt = this.db.prepare(`
       INSERT INTO tool_metrics 
       (id, tool_name, start_time, end_time, duration, success, error_message, parameters, timestamp, input_tokens, output_tokens, total_tokens)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(
+    const values = [
       metric.id,
       metric.toolName,
       metric.startTime.toString(),
@@ -56,11 +108,28 @@ export class MetricsStore {
       metric.timestamp.toISOString(),
       metric.inputTokens,
       metric.outputTokens,
-      metric.totalTokens
-    );
+      metric.totalTokens,
+    ];
+
+    console.debug('[MetricsStore] Executing SQL insert with values:', values);
+
+    stmt.run(values);
+    stmt.free();
+
+    console.debug('[MetricsStore] Metric inserted successfully, saving database to disk');
+
+    this.saveDatabase();
+
+    console.debug('[MetricsStore] Database saved to:', this.dbPath);
   }
 
-  getMetricsSummary(): MetricsSummary[] {
+  async getMetricsSummary(): Promise<MetricsSummary[]> {
+    await this.dbPromise;
+
+    if (!this.db) {
+      throw new Error('[MetricsStore] "db" not initialized.');
+    }
+
     const stmt = this.db.prepare(`
       SELECT 
         tool_name,
@@ -79,47 +148,69 @@ export class MetricsStore {
       ORDER BY total_duration DESC
     `);
 
-    const rows = stmt.all() as any[];
-    return rows.map((row) => ({
-      toolName: row.tool_name,
-      totalCalls: row.total_calls,
-      totalDuration: row.total_duration,
-      avgDuration: row.avg_duration,
-      minDuration: row.min_duration,
-      maxDuration: row.max_duration,
-      successRate: row.success_rate,
-      totalTokens: row.total_tokens || 0,
-      avgTokens: row.avg_tokens || 0,
-      inputTokens: row.input_tokens || 0,
-      outputTokens: row.output_tokens || 0,
-    }));
+    const results: MetricsSummary[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      results.push({
+        toolName: row.tool_name as string,
+        totalCalls: row.total_calls as number,
+        totalDuration: row.total_duration as number,
+        avgDuration: row.avg_duration as number,
+        minDuration: row.min_duration as number,
+        maxDuration: row.max_duration as number,
+        successRate: row.success_rate as number,
+        totalTokens: (row.total_tokens as number) || 0,
+        avgTokens: (row.avg_tokens as number) || 0,
+        inputTokens: (row.input_tokens as number) || 0,
+        outputTokens: (row.output_tokens as number) || 0,
+      });
+    }
+    stmt.free();
+
+    return results;
   }
 
-  getRecentMetrics(limit = 100): ToolMetric[] {
+  async getRecentMetrics(limit = 100): Promise<ToolMetric[]> {
+    await this.dbPromise;
+
+    if (!this.db) {
+      throw new Error('[MetricsStore] "db" not initialized.');
+    }
+
     const stmt = this.db.prepare(`
       SELECT * FROM tool_metrics 
       ORDER BY timestamp DESC 
       LIMIT ?
     `);
 
-    const rows = stmt.all(limit) as any[];
-    return rows.map((row) => ({
-      id: row.id,
-      toolName: row.tool_name,
-      startTime: BigInt(row.start_time),
-      endTime: BigInt(row.end_time),
-      duration: row.duration,
-      success: row.success === 1,
-      errorMessage: row.error_message || undefined,
-      parameters: JSON.parse(row.parameters),
-      timestamp: new Date(row.timestamp),
-      inputTokens: row.input_tokens || 0,
-      outputTokens: row.output_tokens || 0,
-      totalTokens: row.total_tokens || 0,
-    }));
+    const results: ToolMetric[] = [];
+    stmt.bind([limit]);
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      results.push({
+        id: row.id as string,
+        toolName: row.tool_name as string,
+        startTime: BigInt(row.start_time as string),
+        endTime: BigInt(row.end_time as string),
+        duration: row.duration as number,
+        success: (row.success as number) === 1,
+        errorMessage: (row.error_message as string) || undefined,
+        parameters: JSON.parse(row.parameters as string),
+        timestamp: new Date(row.timestamp as string),
+        inputTokens: (row.input_tokens as number) || 0,
+        outputTokens: (row.output_tokens as number) || 0,
+        totalTokens: (row.total_tokens as number) || 0,
+      });
+    }
+    stmt.free();
+
+    return results;
   }
 
   close(): void {
-    this.db.close();
+    if (this.db) {
+      this.saveDatabase();
+      this.db.close();
+    }
   }
 }
