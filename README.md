@@ -1,6 +1,15 @@
-# Claudx
+# `claudx`
 
-A tool that automatically measures and tracks execution times for commands used by Claude Code. This tool helps identify performance bottlenecks and understand where Claude Code spends the most time during operations.
+A tool that automatically measures and tracks execution times for commands used by Claude Code.
+We wrote this tool so we could understand where developers were getting bottlenecked when using Claude Code.
+
+Using it, you can detect what tools are being used, how long they take, and how often they are used.
+From that, you can dedicate resources to speeding up the slowest tools.
+
+e.g:
+
+- Are we spending most of the time running `pnpm test`?
+- Are we spending most of the time running `type-check` or `lint`?
 
 ## Features
 
