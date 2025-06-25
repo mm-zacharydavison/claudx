@@ -100,7 +100,7 @@ SHIM_ALL_FLAG="$SHIM_ALL"
 
 # Function to generate shims on demand
 ensure_shims_updated() {
-    echo "🔍 Checking for shim updates..." >&2
+    echo "[claudx] 🔍 Checking for shim updates..." >&2
     
     # Run the auto-shim manager using tsx to handle native modules
     if [ "\$SHIM_ALL_FLAG" = "true" ]; then
