@@ -159,8 +159,20 @@ setup_path() {
     fi
 }
 
+# Uninstall existing installation
+uninstall_existing() {
+    echo "🧹 Cleaning up existing installation..."
+    if [ -d "$INSTALL_DIR" ]; then
+        rm -rf "$INSTALL_DIR"
+        echo "✅ Removed existing installation"
+    else
+        echo "✅ No existing installation found"
+    fi
+}
+
 # Main installation process
 main() {
+    uninstall_existing
     find_claude_code
     setup_directories
     build_system

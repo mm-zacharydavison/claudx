@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initSqlJs, { type Database } from 'sql.js';
@@ -13,14 +14,27 @@ export class MetricsStore {
   private dbPromise: Promise<void>;
 
   constructor(dbPath?: string) {
-    this.dbPath = dbPath || path.join(__dirname, '..', 'metrics.db');
+    if (dbPath) {
+      this.dbPath = dbPath;
+    } else {
+      const metricsDir = path.join(homedir(), '.claude-code-metrics');
+      // Ensure the directory exists
+      if (!existsSync(metricsDir)) {
+        mkdirSync(metricsDir, { recursive: true });
+      }
+      this.dbPath = path.join(metricsDir, 'metrics.db');
+    }
     this.dbPromise = this.initializeDatabase();
 
-    console.debug('[MetricsStore] Initializing with database path:', this.dbPath);
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Initializing with database path:', this.dbPath);
+    }
   }
 
   private async initializeDatabase(): Promise<void> {
-    console.debug('[MetricsStore] Initializing SQLite database...');
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Initializing SQLite database...');
+    }
 
     const SQL = await initSqlJs();
 
@@ -28,9 +42,13 @@ export class MetricsStore {
     let dbData: Uint8Array | undefined;
     if (existsSync(this.dbPath)) {
       dbData = readFileSync(this.dbPath);
-      console.debug('[MetricsStore] Loaded existing database file, size:', dbData.length, 'bytes');
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug('[MetricsStore] Loaded existing database file, size:', dbData.length, 'bytes');
+      }
     } else {
-      console.debug('[MetricsStore] Creating new database file');
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug('[MetricsStore] Creating new database file');
+      }
     }
 
     this.db = new SQL.Database(dbData);
@@ -56,7 +74,9 @@ export class MetricsStore {
       CREATE INDEX IF NOT EXISTS idx_timestamp ON tool_metrics(timestamp);
     `);
 
-    console.debug('[MetricsStore] Database schema initialized successfully');
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Database schema initialized successfully');
+    }
   }
 
   private saveDatabase(): void {
@@ -64,25 +84,33 @@ export class MetricsStore {
       return;
     }
     const data = this.db.export();
-    console.debug('[MetricsStore] Exporting database, size:', data.length, 'bytes');
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Exporting database, size:', data.length, 'bytes');
+    }
     writeFileSync(this.dbPath, data);
-    console.debug('[MetricsStore] Database file written successfully');
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Database file written successfully');
+    }
   }
 
   async saveMetric(metric: ToolMetric): Promise<void> {
-    console.debug('[MetricsStore] Saving metric for tool:', metric.toolName);
-    console.debug('[MetricsStore] Metric data:', {
-      id: metric.id,
-      toolName: metric.toolName,
-      duration: metric.duration,
-      success: metric.success,
-      timestamp: metric.timestamp.toISOString(),
-      inputTokens: metric.inputTokens,
-      outputTokens: metric.outputTokens,
-      totalTokens: metric.totalTokens,
-      errorMessage: metric.errorMessage,
-      parameters: metric.parameters,
-    });
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Saving metric for tool:', metric.toolName);
+    }
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Metric data:', {
+        id: metric.id,
+        toolName: metric.toolName,
+        duration: metric.duration,
+        success: metric.success,
+        timestamp: metric.timestamp.toISOString(),
+        inputTokens: metric.inputTokens,
+        outputTokens: metric.outputTokens,
+        totalTokens: metric.totalTokens,
+        errorMessage: metric.errorMessage,
+        parameters: metric.parameters,
+      });
+    }
 
     await this.dbPromise;
 
@@ -111,16 +139,22 @@ export class MetricsStore {
       metric.totalTokens,
     ];
 
-    console.debug('[MetricsStore] Executing SQL insert with values:', values);
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Executing SQL insert with values:', values);
+    }
 
     stmt.run(values);
     stmt.free();
 
-    console.debug('[MetricsStore] Metric inserted successfully, saving database to disk');
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Metric inserted successfully, saving database to disk');
+    }
 
     this.saveDatabase();
 
-    console.debug('[MetricsStore] Database saved to:', this.dbPath);
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[MetricsStore] Database saved to:', this.dbPath);
+    }
   }
 
   async getMetricsSummary(): Promise<MetricsSummary[]> {

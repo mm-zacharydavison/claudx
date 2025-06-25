@@ -3,6 +3,10 @@
 import { Command } from 'commander';
 import { MetricsStore } from './metrics-store.js';
 import { MetricsSummary } from './types.js';
+import { rmdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 const program = new Command();
 
@@ -130,6 +134,38 @@ program
     // Note: We'd need to add a clear method to MetricsStore
     console.log('Metrics cleared.');
     store.close();
+  });
+
+program
+  .command('uninstall')
+  .description('Uninstall by removing the ~/.claude-code-metrics directory')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .action(async (options) => {
+    const metricsDir = join(homedir(), '.claude-code-metrics');
+    
+    if (!existsSync(metricsDir)) {
+      console.log('~/.claude-code-metrics directory does not exist. Nothing to uninstall.');
+      return;
+    }
+
+    if (!options.yes) {
+      const { createInterface } = await import('node:readline/promises');
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await rl.question('Are you sure you want to remove ~/.claude-code-metrics directory? (y/N) ');
+      rl.close();
+      if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
+        console.log('Cancelled.');
+        return;
+      }
+    }
+
+    try {
+      await rmdir(metricsDir, { recursive: true });
+      console.log('Successfully removed ~/.claude-code-metrics directory.');
+    } catch (error) {
+      console.error('Failed to remove ~/.claude-code-metrics directory:', error);
+      process.exit(1);
+    }
   });
 
 function formatTable(rows: string[][]): string {

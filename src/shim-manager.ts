@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { MetricsStore } from './metrics-store.js';
-import type { ToolMetric } from './types.js';
+import { type ToolMetric, COMMAND_DESCRIPTORS } from './types.js';
 
 interface TokenInfo {
   inputTokens: number;
@@ -421,10 +421,13 @@ export async function collectAndExecute(
     // Extract token information from output
     const tokens = extractTokensFromOutput(executable, result.stdout, result.stderr, args);
 
+    // Generate tool name with arguments based on command descriptors
+    const toolName = generateToolName(executable, args);
+
     // Save metrics
     await saveMetric({
       id: metricId,
-      toolName: executable,
+      toolName,
       startTime,
       endTime,
       duration,
@@ -442,9 +445,12 @@ export async function collectAndExecute(
     const endTime = process.hrtime.bigint();
     const duration = Number(endTime - startTime) / 1_000_000;
 
+    // Generate tool name with arguments based on command descriptors
+    const toolName = generateToolName(executable, args);
+
     await saveMetric({
       id: metricId,
-      toolName: executable,
+      toolName,
       startTime,
       endTime,
       duration,
@@ -462,6 +468,20 @@ export async function collectAndExecute(
     );
     process.exit(1);
   }
+}
+
+function generateToolName(executable: string, args: string[]): string {
+  // Find matching command descriptor
+  const descriptor = COMMAND_DESCRIPTORS.find(d => d.command === executable);
+  
+  if (!descriptor || descriptor.argumentCount === 0 || args.length === 0) {
+    return executable;
+  }
+  
+  // Take the specified number of arguments
+  const relevantArgs = args.slice(0, descriptor.argumentCount);
+  
+  return `${executable} ${relevantArgs.join(' ')}`;
 }
 
 function estimateTokens(text: string): number {
@@ -495,18 +515,24 @@ function extractTokensFromOutput(
 }
 
 async function saveMetric(metric: ToolMetric): Promise<void> {
-  console.debug('[ShimManager] Starting to save metric for:', metric.toolName);
+  if (process.env.LOG_LEVEL === 'debug') {
+    console.debug('[ShimManager] Starting to save metric for:', metric.toolName);
+  }
 
   try {
     const metricsStore = new MetricsStore();
     await metricsStore.saveMetric(metric);
     metricsStore.close();
 
-    console.debug('[ShimManager] Successfully saved metric for:', metric.toolName);
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[ShimManager] Successfully saved metric for:', metric.toolName);
+    }
   } catch (error) {
     // Don't fail the command if metrics collection fails
     console.warn('Failed to save metrics:', error instanceof Error ? error.message : String(error));
 
-    console.debug('[ShimManager] Error details:', error);
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[ShimManager] Error details:', error);
+    }
   }
 }
