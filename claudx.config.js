@@ -16,11 +16,11 @@ export default {
       type: 'datadog',
       options: {
         apiKey: process.env.DATADOG_API_KEY,
-        site: process.env.DATADOG_SITE || 'datadoghq.com',
-        service: process.env.DATADOG_SERVICE || 'claudx',
-        env: process.env.DATADOG_ENV || 'development',
+        site: 'datadoghq.com',
+        service: 'claudx',
+        env: 'development',
         tags: {
-          team: process.env.DATADOG_TEAM_NAME || 'claudx-developers',
+          team: 'claudx-developers',
           // Add more custom tags as needed
         }
       }

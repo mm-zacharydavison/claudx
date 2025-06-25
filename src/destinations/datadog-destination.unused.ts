@@ -20,13 +20,15 @@ interface DataDogMetric {
 export class DataDogDestination implements DataDestination {
   private config: DataDogConfig;
   private metricsBuffer: ToolMetric[] = [];
+  private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(config: DataDogConfig) {
     this.validateConfig(config);
     this.config = config;
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[claudx] Initialized with config:', {
+      console.debug('[claudx] DataDog destination created (lazy initialization):', {
         site: config.site,
         service: config.service,
         env: config.env,
@@ -72,6 +74,7 @@ export class DataDogDestination implements DataDestination {
     }
 
     try {
+      await this.ensureInitialized();
       const dataDogMetrics = this.convertToDataDogMetric(metric);
       await this.sendToDataDog(dataDogMetrics);
 
@@ -105,6 +108,68 @@ export class DataDogDestination implements DataDestination {
       this.flushBufferedMetrics().catch((error) => {
         console.error('[claudx] DataDog: Failed to flush buffered metrics on close:', error);
       });
+    }
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this.initialize();
+    return this.initializationPromise;
+  }
+
+  private async initialize(): Promise<void> {
+    try {
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug('[claudx] DataDog: Performing lazy initialization...');
+      }
+
+      await this.testConnection();
+      this.isInitialized = true;
+
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug('[claudx] DataDog: Initialization completed successfully');
+      }
+    } catch (error) {
+      this.initializationPromise = null;
+      throw new Error(`DataDog initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async testConnection(): Promise<void> {
+    // Send a minimal test request to validate the connection
+    const testMetric: DataDogMetric = {
+      metric: 'claudx.connection.test',
+      points: [[Math.floor(Date.now() / 1000), 1]],
+      tags: [`service:${this.config.service}`, `env:${this.config.env}`],
+      host: 'localhost',
+      type: 'gauge',
+    };
+
+    const response = await fetch(`https://api.${this.config.site}/api/v1/series`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'DD-API-KEY': this.config.apiKey,
+      },
+      body: JSON.stringify({ series: [testMetric] }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `DataDog connection test failed: ${response.status} ${response.statusText} - ${errorText}`
+      );
+    }
+
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[claudx] DataDog: Connection test successful');
     }
   }
 

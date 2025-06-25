@@ -7,6 +7,7 @@ import type { ClaudxConfig } from './types.js';
 export class ConfigManager {
   private configPath: string;
   private defaultConfigTemplate = `// claudx configuration file
+// http://github.com/mm-zacharydavison/claudx
 // This file supports JavaScript expressions and environment variables
 
 export default {

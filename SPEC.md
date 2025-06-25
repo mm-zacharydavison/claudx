@@ -4,6 +4,9 @@
 - [x] Can be installed in one command.
 - [x] Can be uninstalled in one command.
 
+## Integration
+- [x] Starting `claude` will not be slower than normal.
+
 ## Metrics
 - [x] Collects metrics for all common tools Claude invokes (see `src/tools.ts`).
 - [x] Collects runtime duration for a given tool invocation.
