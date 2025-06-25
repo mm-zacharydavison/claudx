@@ -25,8 +25,8 @@ e.g:
 ## How It Works
 
 1. **Shims the `claude` executable** itself - no manual wrapper needed
-2. **Auto-discovers ALL executables** on your PATH when Claude starts
-3. **Creates shimmed executables** in an isolated directory
+2. **Auto-discovers executables** on your PATH when Claude starts
+3. **Creates shimmed executables** in an isolated directory that Claude will use instead (these track metrics).
 4. **Does not affect your own invocations of tools** - your PATH is never modified
 5. **Collects real execution metrics** automatically when Claude runs commands
 
