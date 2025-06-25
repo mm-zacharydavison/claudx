@@ -152,9 +152,6 @@ npm run cli summary
 
 # View recent executions
 npm run cli recent
-
-# Clear all metrics
-npm run cli clear
 ```
 
 ## Metrics Collected

@@ -114,29 +114,6 @@ program
   });
 
 program
-  .command('clear')
-  .description('Clear all metrics data')
-  .option('-y, --yes', 'Skip confirmation prompt')
-  .action(async (options) => {
-    if (!options.yes) {
-      const { createInterface } = await import('node:readline/promises');
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      const answer = await rl.question('Are you sure you want to clear all metrics? (y/N) ');
-      rl.close();
-      if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-        console.log('Cancelled.');
-        return;
-      }
-    }
-
-    const manager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
-    await manager.initialize();
-    // Note: We'd need to add a clear method to MetricsManager
-    console.log('Metrics cleared.');
-    manager.close();
-  });
-
-program
   .command('config')
   .description('Manage data destinations configuration')
   .option('--show', 'Show current configuration and config file path')

@@ -94,10 +94,6 @@ export default {
       const configModule = await import(`${configUrl}?t=${Date.now()}`);
       const config = configModule.default as ClaudxConfig;
 
-      if (process.env.LOG_LEVEL === 'debug') {
-        console.debug(`[claudx] loaded config ${configUrl} with destinations:`, config.destinations.map(d => d.type))
-      }
-
       // Validate and provide defaults
       if (!config.destinations || config.destinations.length === 0) {
         config.destinations = this.defaultConfig.destinations;
