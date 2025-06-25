@@ -1,6 +1,6 @@
-import { MetricsStore } from '../metrics-store.js';
 import type { DataDestination } from '../data-destinations.js';
-import type { ToolMetric, MetricsSummary } from '../types.js';
+import { MetricsStore } from '../metrics-store.js';
+import type { MetricsSummary, ToolMetric } from '../types.js';
 
 export class SQLiteDestination implements DataDestination {
   private metricsStore: MetricsStore;

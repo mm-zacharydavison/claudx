@@ -516,7 +516,7 @@ function extractTokensFromOutput(
 
 async function saveMetric(metric: ToolMetric): Promise<void> {
   if (process.env.LOG_LEVEL === 'debug') {
-    console.debug('[ShimManager] Starting to save metric for:', metric.toolName);
+    console.debug('[claudx] Starting to save metric for:', metric.toolName);
   }
 
   try {
@@ -526,14 +526,14 @@ async function saveMetric(metric: ToolMetric): Promise<void> {
     metricsManager.close();
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[ShimManager] Successfully saved metric for:', metric.toolName);
+      console.debug('[claudx] Successfully saved metric for:', metric.toolName);
     }
   } catch (error) {
     // Don't fail the command if metrics collection fails
     console.warn('Failed to save metrics:', error instanceof Error ? error.message : String(error));
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[ShimManager] Error details:', error);
+      console.debug('[claudx] Error details:', error);
     }
   }
 }

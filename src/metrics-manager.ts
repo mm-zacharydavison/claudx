@@ -1,7 +1,7 @@
-import type { DataDestination } from './data-destinations.js';
-import { DataDestinationFactory } from './data-destinations.js';
 import { ConfigManager } from './config.js';
-import type { ToolMetric, MetricsSummary } from './types.js';
+import type { DataDestination } from './data-destinations.js';
+import { createDataDestination } from './data-destinations.js';
+import type { MetricsSummary, ToolMetric } from './types.js';
 
 export class MetricsManager {
   private destinations: DataDestination[] = [];
@@ -14,24 +14,30 @@ export class MetricsManager {
   async initialize(): Promise<void> {
     await this.configManager.initializeConfig();
     const config = await this.configManager.getConfig();
-    
+
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsManager] Initializing with destinations:', config.destinations.map(d => d.type));
+      console.debug(
+        '[claudx] Initializing with destinations:',
+        config.destinations.map((d) => d.type)
+      );
     }
 
     // Create destination instances
     for (const destinationConfig of config.destinations) {
       try {
-        const destination = await DataDestinationFactory.create(destinationConfig);
+        const destination = await createDataDestination(destinationConfig);
         this.destinations.push(destination);
       } catch (error) {
-        console.error(`[claudx] Failed to initialize ${destinationConfig.type} destination:`, error);
+        console.error(
+          `[claudx] Failed to initialize ${destinationConfig.type} destination:`,
+          error
+        );
       }
     }
 
     if (this.destinations.length === 0) {
       console.warn('[claudx] No destinations initialized, falling back to SQLite');
-      const fallbackDestination = await DataDestinationFactory.create({ type: 'sqlite' });
+      const fallbackDestination = await createDataDestination({ type: 'sqlite' });
       this.destinations.push(fallbackDestination);
     }
   }
@@ -58,7 +64,7 @@ export class MetricsManager {
         console.error('[claudx] Error getting metrics summary:', error);
       }
     }
-    
+
     return [];
   }
 
@@ -71,7 +77,7 @@ export class MetricsManager {
         console.error('[claudx] Error getting recent metrics:', error);
       }
     }
-    
+
     return [];
   }
 

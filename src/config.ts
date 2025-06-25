@@ -1,5 +1,5 @@
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { homedir, cwd } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ClaudxConfig } from './types.js';
@@ -40,20 +40,31 @@ export default {
     destinations: [
       {
         type: 'sqlite',
-        options: {}
-      }
-    ]
+        options: {},
+      },
+    ],
   };
 
   constructor(configPath?: string) {
     if (configPath) {
       this.configPath = configPath;
     } else {
-      const configDir = join(homedir(), '.claudx');
-      if (!existsSync(configDir)) {
+      // Try current directory first, then home directory
+      const currentDirConfig = join(process.cwd());
+      const homeDirConfig = join(homedir(), '.claudx');
+      
+      let configDir: string;
+      if (existsSync(currentDirConfig)) {
+        configDir = currentDirConfig;
+      } else if (existsSync(homeDirConfig)) {
+        configDir = homeDirConfig;
+      } else {
+        // Default to current directory if neither exists
+        configDir = currentDirConfig;
         mkdirSync(configDir, { recursive: true });
       }
-      this.configPath = join(configDir, 'config.js');
+      
+      this.configPath = join(configDir, 'claudx.config.js');
     }
   }
 
@@ -65,14 +76,11 @@ export default {
     }
 
     try {
-      // Clear module cache to allow config changes without restart
-      delete require.cache[this.configPath];
-      
       // Use dynamic import to load the config
       const configUrl = pathToFileURL(this.configPath).href;
       const configModule = await import(`${configUrl}?t=${Date.now()}`);
       const config = configModule.default as ClaudxConfig;
-      
+
       // Validate and provide defaults
       if (!config.destinations || config.destinations.length === 0) {
         config.destinations = this.defaultConfig.destinations;
@@ -96,7 +104,9 @@ export default {
   updateConfig(updater: (config: ClaudxConfig) => ClaudxConfig): Promise<void> {
     // For JS configs, we recommend manual editing
     // This method provides programmatic updates by rewriting the file
-    console.warn('[claudx] Configuration updates for JS files should be done by editing the config file directly.');
+    console.warn(
+      '[claudx] Configuration updates for JS files should be done by editing the config file directly.'
+    );
     console.log(`[claudx] Config file location: ${this.configPath}`);
     return Promise.resolve();
   }
@@ -109,7 +119,9 @@ export default {
     if (!existsSync(this.configPath)) {
       this.createDefaultConfig();
       console.log(`[claudx] Created default config file at: ${this.configPath}`);
-      console.log('[claudx] Edit this file to configure your data destinations with environment variables.');
+      console.log(
+        '[claudx] Edit this file to configure your data destinations with environment variables.'
+      );
     }
   }
 }

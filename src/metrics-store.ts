@@ -27,13 +27,13 @@ export class MetricsStore {
     this.dbPromise = this.initializeDatabase();
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Initializing with database path:', this.dbPath);
+      console.debug('[claudx] Initializing with database path:', this.dbPath);
     }
   }
 
   private async initializeDatabase(): Promise<void> {
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Initializing SQLite database...');
+      console.debug('[claudx] Initializing SQLite database...');
     }
 
     const SQL = await initSqlJs();
@@ -44,14 +44,14 @@ export class MetricsStore {
       dbData = readFileSync(this.dbPath);
       if (process.env.LOG_LEVEL === 'debug') {
         console.debug(
-          '[MetricsStore] Loaded existing database file, size:',
+          '[claudx] Loaded existing database file, size:',
           dbData.length,
           'bytes'
         );
       }
     } else {
       if (process.env.LOG_LEVEL === 'debug') {
-        console.debug('[MetricsStore] Creating new database file');
+        console.debug('[claudx] Creating new database file');
       }
     }
 
@@ -79,7 +79,7 @@ export class MetricsStore {
     `);
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Database schema initialized successfully');
+      console.debug('[claudx] Database schema initialized successfully');
     }
   }
 
@@ -89,20 +89,20 @@ export class MetricsStore {
     }
     const data = this.db.export();
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Exporting database, size:', data.length, 'bytes');
+      console.debug('[claudx] Exporting database, size:', data.length, 'bytes');
     }
     writeFileSync(this.dbPath, data);
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Database file written successfully');
+      console.debug('[claudx] Database file written successfully');
     }
   }
 
   async saveMetric(metric: ToolMetric): Promise<void> {
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Saving metric for tool:', metric.toolName);
+      console.debug('[claudx] Saving metric for tool:', metric.toolName);
     }
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Metric data:', {
+      console.debug('[claudx] Metric data:', {
         id: metric.id,
         toolName: metric.toolName,
         duration: metric.duration,
@@ -119,7 +119,7 @@ export class MetricsStore {
     await this.dbPromise;
 
     if (!this.db) {
-      throw new Error('[MetricsStore] "db" not initialized.');
+      throw new Error('[claudx] "db" not initialized.');
     }
 
     const stmt = this.db.prepare(`
@@ -144,20 +144,20 @@ export class MetricsStore {
     ];
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Executing SQL insert with values:', values);
+      console.debug('[claudx] Executing SQL insert with values:', values);
     }
 
     stmt.run(values);
     stmt.free();
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Metric inserted successfully, saving database to disk');
+      console.debug('[claudx] Metric inserted successfully, saving database to disk');
     }
 
     this.saveDatabase();
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[MetricsStore] Database saved to:', this.dbPath);
+      console.debug('[claudx] Database saved to:', this.dbPath);
     }
   }
 
@@ -165,7 +165,7 @@ export class MetricsStore {
     await this.dbPromise;
 
     if (!this.db) {
-      throw new Error('[MetricsStore] "db" not initialized.');
+      throw new Error('[claudx] "db" not initialized.');
     }
 
     const stmt = this.db.prepare(`
@@ -212,7 +212,7 @@ export class MetricsStore {
     await this.dbPromise;
 
     if (!this.db) {
-      throw new Error('[MetricsStore] "db" not initialized.');
+      throw new Error('[claudx] "db" not initialized.');
     }
 
     const stmt = this.db.prepare(`

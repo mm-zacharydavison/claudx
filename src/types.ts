@@ -93,7 +93,7 @@ export interface ClaudxConfig {
     options?: {
       // SQLite options
       dbPath?: string;
-      
+
       // DataDog options
       apiKey?: string;
       site?: string;

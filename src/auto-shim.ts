@@ -92,7 +92,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const autoShim = new AutoShimManager(baseDir, shimAll);
 
   autoShim.ensureShimsUpdated().catch((error) => {
-    console.error('[claudx] ❌ Auto-shim failed:', error instanceof Error ? error.message : String(error));
+    console.error(
+      '[claudx] ❌ Auto-shim failed:',
+      error instanceof Error ? error.message : String(error)
+    );
     process.exit(1);
   });
 }

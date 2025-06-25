@@ -156,7 +156,9 @@ program
       await configManager.initializeConfig();
       console.log('Configuration file initialized at:');
       console.log(configManager.getConfigPath());
-      console.log('\nEdit this file to configure your data destinations with environment variables.');
+      console.log(
+        '\nEdit this file to configure your data destinations with environment variables.'
+      );
       return;
     }
 
@@ -164,7 +166,7 @@ program
       try {
         await manager.initialize();
         const currentConfig = await configManager.getConfig();
-        
+
         console.log('Current Data Destinations:');
         console.log('========================');
 
@@ -172,7 +174,7 @@ program
           if (dest.options) {
             for (const [key, value] of Object.entries(dest.options)) {
               if (typeof value !== 'string') {
-                throw new Error(`Expected string for ${key}, got ${typeof value}`)
+                throw new Error(`Expected string for ${key}, got ${typeof value}`);
               }
               if (key === 'apiKey' && value) {
                 console.log(`   ${key}: ${'*'.repeat(8)}${value.slice(-4)}`);
@@ -182,7 +184,7 @@ program
             }
           }
           console.log();
-        })
+        });
 
         console.log('Configuration file path:');
         console.log(configManager.getConfigPath());
@@ -198,7 +200,7 @@ program
     console.log('========================');
     console.log('');
     console.log('claudx config --show    Show current configuration');
-    console.log('claudx config --init    Initialize configuration file');  
+    console.log('claudx config --init    Initialize configuration file');
     console.log('claudx config --path    Show configuration file path');
     console.log('');
     console.log('Edit the configuration file directly to add/remove destinations.');
