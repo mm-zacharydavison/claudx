@@ -9,6 +9,7 @@
     "cli": "node --import tsx ./src/cli.ts",
     "bootstrap": "bash bootstrap.sh",
     "bootstrap:all": "bash bootstrap.sh --shim-all",
+    "uninstall": "bash uninstall.sh",
     "lint": "biome check src/",
     "typecheck": "tsc --noEmit",
     "test": "bun test tests/",

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code Metrics Installer
+# claudx Installer
 # This script creates a shim for claude-code that automatically manages metrics collection
 
 set -e
@@ -16,16 +16,20 @@ while [[ $# -gt 0 ]]; do
       SHIM_ALL=true
       shift
       ;;
+    --uninstall)
+      uninstall_only
+      ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--shim-all]"
-      echo "  --shim-all  Shim all executables on PATH (slower but complete coverage)"
+      echo "Usage: $0 [--shim-all] [--uninstall]"
+      echo "  --shim-all   Shim all executables on PATH (slower but complete coverage)"
+      echo "  --uninstall  Remove claudx installation completely"
       exit 1
       ;;
   esac
 done
 
-echo "🚀 Claude Code Metrics Installer"
+echo "🚀 claudx Installer"
 echo "================================"
 echo ""
 
@@ -88,7 +92,7 @@ create_claude_shim() {
     # Create the claude shim script
     cat > "$INSTALL_DIR/claude" << EOF
 #!/bin/bash
-# Claude Code Metrics Shim
+# claudx Shim
 # Auto-generates and manages shims for all executables
 
 METRICS_DIR="$INSTALL_DIR"
@@ -150,7 +154,7 @@ setup_path() {
     # Check if already in PATH
     if ! grep -q "claudx" "$SHELL_RC" 2>/dev/null; then
         echo "" >> "$SHELL_RC"
-        echo "# Claude Code Metrics - added by installer" >> "$SHELL_RC"
+        echo "# claudx - added by installer" >> "$SHELL_RC"
         echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$SHELL_RC"
         echo "✅ Added to $SHELL_RC"
         echo "🔄 Please restart your shell or run: source $SHELL_RC"
@@ -168,6 +172,12 @@ uninstall_existing() {
     else
         echo "✅ No existing installation found"
     fi
+}
+
+# Run standalone uninstall
+uninstall_only() {
+    ./uninstall.sh
+    exit 0
 }
 
 # Main installation process
