@@ -1,0 +1,521 @@
+import { exec, spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { promisify } from 'node:util';
+import { MetricsStore } from './metrics-store.js';
+import type { ToolMetric } from './types.js';
+
+const execAsync = promisify(exec);
+
+export interface ShimConfig {
+  executable: string;
+  originalPath?: string;
+  shimPath?: string;
+  enabled: boolean;
+}
+
+export class ShimManager {
+  private metricsStore: MetricsStore;
+  private shimDir: string;
+  private backupDir: string;
+  private configFile: string;
+
+  // Executables to exclude from shimming for safety
+  private readonly EXCLUDED_EXECUTABLES = new Set([
+    // System critical
+    'init',
+    'kernel',
+    'kthreadd',
+    'systemd',
+    'systemctl',
+    // Shell and core utilities (to avoid infinite loops)
+    'sh',
+    'bash',
+    'zsh',
+    'fish',
+    'dash',
+    'csh',
+    'tcsh',
+    // Core system commands that could break the system
+    'sudo',
+    'su',
+    'passwd',
+    'mount',
+    'umount',
+    'fsck',
+    'fdisk',
+    'mkfs',
+    'parted',
+    'lvm',
+    'cryptsetup',
+    // Process and system management
+    'kill',
+    'killall',
+    'pkill',
+    'ps',
+    'top',
+    'htop',
+    // Network and security critical
+    'iptables',
+    'firewalld',
+    'ufw',
+    'ssh',
+    'sshd',
+    // Package managers (could cause system issues)
+    'apt',
+    'apt-get',
+    'yum',
+    'dnf',
+    'pacman',
+    'zypper',
+    // Our own tools (to avoid infinite recursion)
+    'claude-code-metrics',
+    'claude-code-shim',
+    // Node.js process (to avoid shimming ourselves)
+    'node',
+    'npm',
+    'bun', // We'll handle these specially if needed
+  ]);
+
+  constructor(metricsStore: MetricsStore, baseDir?: string) {
+    this.metricsStore = metricsStore;
+    const base = baseDir || path.join(process.env.HOME || '/tmp', '.claude-code-metrics');
+    this.shimDir = path.join(base, 'shims');
+    this.backupDir = path.join(base, 'backups');
+    this.configFile = path.join(base, 'shim-config.json');
+  }
+
+  async initialize(): Promise<void> {
+    await fs.mkdir(this.shimDir, { recursive: true });
+    await fs.mkdir(this.backupDir, { recursive: true });
+  }
+
+  async findExecutablePath(executable: string): Promise<string | null> {
+    try {
+      const { stdout } = await execAsync(`which ${executable}`);
+      return stdout.trim();
+    } catch {
+      return null;
+    }
+  }
+
+  async discoverAllExecutables(): Promise<string[]> {
+    const pathDirs = (process.env.PATH || '').split(':').filter((dir) => dir.length > 0);
+    const executables = new Set<string>();
+
+    console.log(`🔍 Discovering executables in ${pathDirs.length} PATH directories...`);
+
+    // Process directories in parallel for better performance
+    const discoveryPromises = pathDirs.map(async (dir) => {
+      try {
+        const entries = await fs.readdir(dir);
+        const dirExecutables: string[] = [];
+
+        // Process entries in batches to avoid overwhelming the filesystem
+        const batchSize = 50;
+        for (let i = 0; i < entries.length; i += batchSize) {
+          const batch = entries.slice(i, i + batchSize);
+
+          const batchPromises = batch.map(async (entry) => {
+            if (this.shouldShimExecutable(entry)) {
+              const fullPath = path.join(dir, entry);
+
+              try {
+                const stats = await fs.stat(fullPath);
+                // Check if it's a regular file and executable
+                if (stats.isFile() && (stats.mode & 0o111) !== 0) {
+                  return entry;
+                }
+              } catch {
+                // Skip entries we can't stat (broken symlinks, etc.)
+                return null;
+              }
+            }
+            return null;
+          });
+
+          const batchResults = await Promise.all(batchPromises);
+          dirExecutables.push(...(batchResults.filter(Boolean) as string[]));
+        }
+
+        return dirExecutables;
+      } catch {
+        // Skip directories we can't read
+        return [];
+      }
+    });
+
+    const allResults = await Promise.all(discoveryPromises);
+
+    // Flatten and deduplicate results
+    for (const dirExecutables of allResults) {
+      for (const executable of dirExecutables) {
+        executables.add(executable);
+      }
+    }
+
+    const result = Array.from(executables).sort();
+    console.log(`✅ Found ${result.length} executable tools to shim`);
+
+    return result;
+  }
+
+  private shouldShimExecutable(executable: string): boolean {
+    // Skip if in exclusion list
+    if (this.EXCLUDED_EXECUTABLES.has(executable)) {
+      return false;
+    }
+
+    // Skip hidden files and system files
+    if (executable.startsWith('.')) {
+      return false;
+    }
+
+    // Skip files with extensions that are usually not executables
+    const ext = path.extname(executable).toLowerCase();
+    const skipExtensions = new Set([
+      '.txt',
+      '.md',
+      '.json',
+      '.xml',
+      '.html',
+      '.css',
+      '.js',
+      '.so',
+      '.a',
+      '.o',
+    ]);
+    if (skipExtensions.has(ext)) {
+      return false;
+    }
+
+    // Skip files that look like libraries or system files
+    if (executable.includes('.so.') || executable.startsWith('lib')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  async createShim(executable: string): Promise<void> {
+    const originalPath = await this.findExecutablePath(executable);
+    if (!originalPath) {
+      throw new Error(`Executable '${executable}' not found in PATH`);
+    }
+
+    const shimPath = path.join(this.shimDir, executable);
+    const backupPath = path.join(this.backupDir, `${executable}.original`);
+
+    // Create backup of original
+    await fs.copyFile(originalPath, backupPath);
+
+    // Create shim script
+    const shimScript = this.generateShimScript(executable, originalPath);
+    await fs.writeFile(shimPath, shimScript, { mode: 0o755 });
+  }
+
+  private generateShimScript(executable: string, originalPath: string): string {
+    // In ES modules, __dirname is not available, so we need to construct the path differently
+    const currentFile = new URL(import.meta.url).pathname;
+    const currentDir = path.dirname(currentFile);
+    const metricsCollectorPath = path.resolve(currentDir, '../dist/metrics-collector.js');
+
+    return `#!/bin/bash
+# Claude Code Metrics Shim for ${executable}
+# Generated on ${new Date().toISOString()}
+
+# Collect metrics
+node "${metricsCollectorPath}" "${executable}" "${originalPath}" "$@"
+`;
+  }
+
+  async installShims(executables?: string[]): Promise<void> {
+    await this.initialize();
+
+    // If no executables provided, discover all from PATH
+    const targetExecutables = executables || (await this.discoverAllExecutables());
+
+    console.log(`🚀 Installing shims for ${targetExecutables.length} executables...`);
+
+    const config: ShimConfig[] = [];
+    let successCount = 0;
+    let skipCount = 0;
+
+    // Process in parallel batches for much better performance
+    const batchSize = 100; // Process 100 shims concurrently
+    const batches = [];
+
+    for (let i = 0; i < targetExecutables.length; i += batchSize) {
+      batches.push(targetExecutables.slice(i, i + batchSize));
+    }
+
+    console.log(`📦 Processing ${batches.length} batches of ${batchSize} shims each...`);
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+
+      // Process entire batch in parallel
+      const batchPromises = batch.map(async (executable) => {
+        try {
+          await this.createShim(executable);
+          const originalPath = await this.findExecutablePath(executable);
+          const shimPath = path.join(this.shimDir, executable);
+
+          return {
+            executable,
+            originalPath: originalPath || undefined,
+            shimPath,
+            enabled: true,
+            success: true,
+          };
+        } catch (error) {
+          // Only show individual errors for small batches
+          if (targetExecutables.length <= 50) {
+            console.warn(
+              `⚠️  Failed to create shim for ${executable}:`,
+              error instanceof Error ? error.message : String(error)
+            );
+          }
+          return {
+            executable,
+            enabled: false,
+            success: false,
+          };
+        }
+      });
+
+      // Wait for entire batch to complete
+      const batchResults = await Promise.all(batchPromises);
+
+      // Collect results
+      for (const result of batchResults) {
+        config.push({
+          executable: result.executable,
+          originalPath: result.originalPath,
+          shimPath: result.shimPath,
+          enabled: result.enabled,
+        });
+
+        if (result.success) {
+          successCount++;
+        } else {
+          skipCount++;
+        }
+      }
+
+      // Show progress
+      const completed = (batchIndex + 1) * batchSize;
+      const actualCompleted = Math.min(completed, targetExecutables.length);
+      console.log(
+        `📊 Progress: ${actualCompleted}/${targetExecutables.length} executables processed (${successCount} shims created)...`
+      );
+    }
+
+    // Save configuration
+    await fs.writeFile(this.configFile, JSON.stringify(config, null, 2));
+
+    console.log('✅ Shim installation completed:');
+    console.log(`   📦 ${successCount} shims created successfully`);
+    if (skipCount > 0) {
+      console.log(`   ⚠️  ${skipCount} executables skipped (errors or excluded)`);
+    }
+
+    // Create Claude Code launcher wrapper
+    await this.createClaudeWrapper();
+  }
+
+  private async createClaudeWrapper(): Promise<void> {
+    const wrapperPath = path.join(path.dirname(this.shimDir), 'claude-code-with-metrics');
+
+    const wrapperScript = `#!/bin/bash
+# Claude Code Metrics Wrapper
+# This wrapper ensures Claude Code runs with shimmed executables for metrics collection
+# The user's environment remains completely untouched
+
+# Add our shim directory to PATH for Claude Code execution only
+export PATH="${this.shimDir}:\$PATH"
+
+# Find and execute the real claude-code
+CLAUDE_CODE_PATH=\$(which claude-code 2>/dev/null || echo "claude-code")
+
+if [ "\$CLAUDE_CODE_PATH" = "claude-code" ]; then
+    echo "Warning: claude-code not found in PATH. Trying to execute anyway..."
+fi
+
+echo "🔍 Claude Code Metrics: Monitoring tool execution..."
+echo "📊 Metrics will be saved to the claude-code-metrics database"
+echo "💡 View metrics with: cd $(pwd) && npm run cli summary"
+echo ""
+
+# Execute claude-code with the modified PATH
+exec "\$CLAUDE_CODE_PATH" "\$@"
+`;
+
+    await fs.writeFile(wrapperPath, wrapperScript, { mode: 0o755 });
+
+    console.log(`\\n✅ Created Claude Code wrapper: ${wrapperPath}`);
+    console.log('\\n🚀 To use Claude Code with metrics collection:');
+    console.log(`   ${wrapperPath}`);
+    console.log('\\n💡 Or create an alias in your shell:');
+    console.log(`   alias claude-code-metrics="${wrapperPath}"`);
+    console.log('\\n🔒 Your system PATH remains completely untouched!');
+  }
+
+  private async detectShell(): Promise<string> {
+    const shell = process.env.SHELL || '/bin/bash';
+    if (shell.includes('zsh')) return '.zshrc';
+    if (shell.includes('fish')) return '.config/fish/config.fish';
+    if (shell.includes('bash')) return '.bashrc';
+    return '.profile';
+  }
+
+  async uninstallShims(): Promise<void> {
+    try {
+      const configData = await fs.readFile(this.configFile, 'utf-8');
+      const config: ShimConfig[] = JSON.parse(configData);
+
+      for (const shim of config) {
+        if (shim.enabled && shim.shimPath) {
+          await fs.unlink(shim.shimPath);
+          console.log(`Removed shim: ${shim.shimPath}`);
+        }
+      }
+
+      // Remove Claude Code wrapper
+      const wrapperPath = path.join(path.dirname(this.shimDir), 'claude-code-with-metrics');
+      try {
+        await fs.unlink(wrapperPath);
+        console.log(`Removed Claude Code wrapper: ${wrapperPath}`);
+      } catch {
+        // Wrapper might not exist
+      }
+
+      // Remove entire metrics directory
+      try {
+        await fs.rm(path.dirname(this.shimDir), { recursive: true, force: true });
+        console.log(`Removed metrics directory: ${path.dirname(this.shimDir)}`);
+      } catch (error) {
+        console.warn(
+          'Could not remove metrics directory:',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+
+      console.log('\\n✅ All shims removed successfully!');
+      console.log('🔒 Your system environment was never modified.');
+    } catch (error) {
+      console.warn(
+        'Failed to read shim configuration:',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  async getShimStatus(): Promise<ShimConfig[]> {
+    try {
+      const configData = await fs.readFile(this.configFile, 'utf-8');
+      return JSON.parse(configData);
+    } catch {
+      return [];
+    }
+  }
+}
+
+// Metrics collector functions - called when a shim is executed
+export async function collectAndExecute(
+  executable: string,
+  originalPath: string,
+  args: string[]
+): Promise<void> {
+  const startTime = process.hrtime.bigint();
+  const metricId = randomUUID();
+
+  try {
+    // Execute original command
+    const result = await new Promise<{ code: number; stdout: string; stderr: string }>(
+      (resolve, reject) => {
+        const child = spawn(originalPath, args, {
+          stdio: ['inherit', 'pipe', 'pipe'],
+          env: process.env,
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout?.on('data', (data) => {
+          const chunk = data.toString();
+          stdout += chunk;
+          process.stdout.write(chunk);
+        });
+
+        child.stderr?.on('data', (data) => {
+          const chunk = data.toString();
+          stderr += chunk;
+          process.stderr.write(chunk);
+        });
+
+        child.on('close', (code) => {
+          resolve({ code: code || 0, stdout, stderr });
+        });
+
+        child.on('error', reject);
+      }
+    );
+
+    const endTime = process.hrtime.bigint();
+    const duration = Number(endTime - startTime) / 1_000_000;
+
+    // Save metrics
+    await saveMetric({
+      id: metricId,
+      toolName: executable,
+      startTime,
+      endTime,
+      duration,
+      success: result.code === 0,
+      errorMessage: result.code !== 0 ? `Exit code: ${result.code}` : undefined,
+      parameters: { args, cwd: process.cwd() },
+      timestamp: new Date(),
+      inputTokens: 0, // Not applicable for raw executables
+      outputTokens: 0,
+      totalTokens: 0,
+    });
+
+    process.exit(result.code);
+  } catch (error) {
+    const endTime = process.hrtime.bigint();
+    const duration = Number(endTime - startTime) / 1_000_000;
+
+    await saveMetric({
+      id: metricId,
+      toolName: executable,
+      startTime,
+      endTime,
+      duration,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      parameters: { args, cwd: process.cwd() },
+      timestamp: new Date(),
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    });
+
+    console.error(
+      `Shim execution failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+    process.exit(1);
+  }
+}
+
+async function saveMetric(metric: ToolMetric): Promise<void> {
+  try {
+    const metricsStore = new MetricsStore();
+    metricsStore.saveMetric(metric);
+    metricsStore.close();
+  } catch (error) {
+    // Don't fail the command if metrics collection fails
+    console.warn('Failed to save metrics:', error instanceof Error ? error.message : String(error));
+  }
+}
