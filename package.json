@@ -1,5 +1,5 @@
 {
-  "name": "claude-code-metrics",
+  "name": "claudx",
   "version": "1.0.0",
   "description": "Executable shimming tool for measuring claude-code command execution times",
   "main": "dist/cli.js",
@@ -15,7 +15,7 @@
     "test:integration": "bun test tests/integration.test.ts"
   },
   "bin": {
-    "claude-code-metrics": "./dist/cli.js"
+    "claudx": "./dist/cli.js"
   },
   "keywords": [
     "claude-code",

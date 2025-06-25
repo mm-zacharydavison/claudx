@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { MetricsStore } from './metrics-store.js';
-import { type ToolMetric, COMMAND_DESCRIPTORS } from './types.js';
+import { COMMAND_DESCRIPTORS, type ToolMetric } from './types.js';
 
 interface TokenInfo {
   inputTokens: number;
@@ -76,8 +76,8 @@ export class ShimManager {
     'pacman',
     'zypper',
     // Our own tools (to avoid infinite recursion)
-    'claude-code-metrics',
-    'claude-code-shim',
+    'claudx',
+    'claudx-shim',
     // Node.js process (to avoid shimming ourselves)
     'node',
     'npm',
@@ -97,7 +97,7 @@ export class ShimManager {
 
   constructor(metricsStore: MetricsStore, baseDir?: string) {
     this.metricsStore = metricsStore;
-    const base = baseDir || path.join(process.env.HOME || '/tmp', '.claude-code-metrics');
+    const base = baseDir || path.join(process.env.HOME || '/tmp', '.claudx');
     this.shimDir = path.join(base, 'shims');
     this.backupDir = path.join(base, 'backups');
     this.configFile = path.join(base, 'shim-config.json');
@@ -239,7 +239,7 @@ export class ShimManager {
     const metricsCollectorPath = path.resolve(currentDir, '../dist/metrics-collector.js');
 
     return `#!/bin/bash
-# Claude Code Metrics Shim for ${executable}
+# Claudx Metrics Shim for ${executable}
 # Generated on ${new Date().toISOString()}
 
 # Collect metrics (pass debug flag if present)
@@ -343,30 +343,30 @@ node $DEBUG_FLAG "${metricsCollectorPath}" "${executable}" "${originalPath}" "$@
   }
 
   private async createClaudeWrapper(): Promise<void> {
-    const wrapperPath = path.join(path.dirname(this.shimDir), 'claude-code-with-metrics');
+    const wrapperPath = path.join(path.dirname(this.shimDir), 'claudx-with-metrics');
 
     const wrapperScript = `#!/bin/bash
-# Claude Code Metrics Wrapper
-# This wrapper ensures Claude Code runs with shimmed executables for metrics collection
+# Claudx Metrics Wrapper
+# This wrapper ensures Claudx runs with shimmed executables for metrics collection
 # The user's environment remains completely untouched
 
-# Add our shim directory to PATH for Claude Code execution only
+# Add our shim directory to PATH for Claudx execution only
 export PATH="${this.shimDir}:\$PATH"
 
-# Find and execute the real claude-code
-CLAUDE_CODE_PATH=\$(which claude-code 2>/dev/null || echo "claude-code")
+# Find and execute the real claudx
+CLAUDX_PATH=\$(which claudx 2>/dev/null || echo "claudx")
 
-if [ "\$CLAUDE_CODE_PATH" = "claude-code" ]; then
-    echo "Warning: claude-code not found in PATH. Trying to execute anyway..."
+if [ "\$CLAUDX_PATH" = "claudx" ]; then
+    echo "Warning: claudx not found in PATH. Trying to execute anyway..."
 fi
 
-echo "🔍 Claude Code Metrics: Monitoring tool execution..."
-echo "📊 Metrics will be saved to the claude-code-metrics database"
+echo "🔍 Claudx Metrics: Monitoring tool execution..."
+echo "📊 Metrics will be saved to the claudx database"
 echo "💡 View metrics with: cd $(pwd) && npm run cli summary"
 echo ""
 
-# Execute claude-code with the modified PATH
-exec "\$CLAUDE_CODE_PATH" "\$@"
+# Execute claudx with the modified PATH
+exec "\$CLAUDX_PATH" "\$@"
 `;
 
     await fs.writeFile(wrapperPath, wrapperScript, { mode: 0o755 });
@@ -472,15 +472,15 @@ export async function collectAndExecute(
 
 function generateToolName(executable: string, args: string[]): string {
   // Find matching command descriptor
-  const descriptor = COMMAND_DESCRIPTORS.find(d => d.command === executable);
-  
+  const descriptor = COMMAND_DESCRIPTORS.find((d) => d.command === executable);
+
   if (!descriptor || descriptor.argumentCount === 0 || args.length === 0) {
     return executable;
   }
-  
+
   // Take the specified number of arguments
   const relevantArgs = args.slice(0, descriptor.argumentCount);
-  
+
   return `${executable} ${relevantArgs.join(' ')}`;
 }
 

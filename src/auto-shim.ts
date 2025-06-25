@@ -7,8 +7,8 @@ import { MetricsStore } from './metrics-store.js';
 import { ShimManager } from './shim-manager.js';
 
 /**
- * Auto-shim manager for claude-code startup
- * This runs when claude-code starts to ensure all shims are current
+ * Auto-shim manager for claudx startup
+ * This runs when claudx starts to ensure all shims are current
  */
 export class AutoShimManager {
   private shimDir: string;
@@ -85,7 +85,7 @@ export class AutoShimManager {
 
 // CLI interface for auto-shim
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const baseDir = process.argv[2] || path.join(process.env.HOME || '/tmp', '.claude-code-metrics');
+  const baseDir = process.argv[2] || path.join(process.env.HOME || '/tmp', '.claudx');
   const shimAll = process.argv[3] === 'true';
 
   const autoShim = new AutoShimManager(baseDir, shimAll);

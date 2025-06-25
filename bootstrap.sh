@@ -4,7 +4,7 @@
 
 set -e
 
-INSTALL_DIR="$HOME/.claude-code-metrics"
+INSTALL_DIR="$HOME/.claudx"
 SHIM_DIR="$INSTALL_DIR/shims"
 ORIGINAL_CLAUDE_CODE=""
 SHIM_ALL=false
@@ -148,7 +148,7 @@ setup_path() {
     esac
     
     # Check if already in PATH
-    if ! grep -q "claude-code-metrics" "$SHELL_RC" 2>/dev/null; then
+    if ! grep -q "claudx" "$SHELL_RC" 2>/dev/null; then
         echo "" >> "$SHELL_RC"
         echo "# Claude Code Metrics - added by installer" >> "$SHELL_RC"
         echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$SHELL_RC"

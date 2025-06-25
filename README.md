@@ -1,4 +1,4 @@
-# Claude Code Metrics
+# Claudx
 
 A tool that automatically measures and tracks execution times for commands used by Claude Code. This tool helps identify performance bottlenecks and understand where Claude Code spends the most time during operations.
 
@@ -70,10 +70,10 @@ claude
 ### Installation Management
 
 ```bash
-# Install Claude metrics (one-time setup)
+# Install Claudx metrics (one-time setup)
 npm run install
 
-# Remove Claude metrics (uninstall)
+# Remove Claudx metrics (uninstall)
 npm run uninstall
 ```
 

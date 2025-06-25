@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +17,7 @@ export class MetricsStore {
     if (dbPath) {
       this.dbPath = dbPath;
     } else {
-      const metricsDir = path.join(homedir(), '.claude-code-metrics');
+      const metricsDir = path.join(homedir(), '.claudx');
       // Ensure the directory exists
       if (!existsSync(metricsDir)) {
         mkdirSync(metricsDir, { recursive: true });
@@ -43,7 +43,11 @@ export class MetricsStore {
     if (existsSync(this.dbPath)) {
       dbData = readFileSync(this.dbPath);
       if (process.env.LOG_LEVEL === 'debug') {
-        console.debug('[MetricsStore] Loaded existing database file, size:', dbData.length, 'bytes');
+        console.debug(
+          '[MetricsStore] Loaded existing database file, size:',
+          dbData.length,
+          'bytes'
+        );
       }
     } else {
       if (process.env.LOG_LEVEL === 'debug') {

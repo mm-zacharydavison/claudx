@@ -1,19 +1,16 @@
 #!/usr/bin/env node
 
+import { existsSync } from 'node:fs';
+import { rmdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { Command } from 'commander';
 import { MetricsStore } from './metrics-store.js';
 import { MetricsSummary } from './types.js';
-import { rmdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
 
 const program = new Command();
 
-program
-  .name('claude-code-metrics')
-  .description('View claude-code tool execution metrics')
-  .version('1.0.0');
+program.name('claudx').description('View claudx tool execution metrics').version('1.0.0');
 
 program
   .command('summary')
@@ -138,20 +135,22 @@ program
 
 program
   .command('uninstall')
-  .description('Uninstall by removing the ~/.claude-code-metrics directory')
+  .description('Uninstall by removing the ~/.claudx directory')
   .option('-y, --yes', 'Skip confirmation prompt')
   .action(async (options) => {
-    const metricsDir = join(homedir(), '.claude-code-metrics');
-    
+    const metricsDir = join(homedir(), '.claudx');
+
     if (!existsSync(metricsDir)) {
-      console.log('~/.claude-code-metrics directory does not exist. Nothing to uninstall.');
+      console.log('~/.claudx directory does not exist. Nothing to uninstall.');
       return;
     }
 
     if (!options.yes) {
       const { createInterface } = await import('node:readline/promises');
       const rl = createInterface({ input: process.stdin, output: process.stdout });
-      const answer = await rl.question('Are you sure you want to remove ~/.claude-code-metrics directory? (y/N) ');
+      const answer = await rl.question(
+        'Are you sure you want to remove ~/.claudx directory? (y/N) '
+      );
       rl.close();
       if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
         console.log('Cancelled.');
@@ -161,9 +160,9 @@ program
 
     try {
       await rmdir(metricsDir, { recursive: true });
-      console.log('Successfully removed ~/.claude-code-metrics directory.');
+      console.log('Successfully removed ~/.claudx directory.');
     } catch (error) {
-      console.error('Failed to remove ~/.claude-code-metrics directory:', error);
+      console.error('Failed to remove ~/.claudx directory:', error);
       process.exit(1);
     }
   });
