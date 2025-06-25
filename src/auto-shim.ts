@@ -3,7 +3,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { CLAUDE_TOOLS_WHITELIST } from './claude-tools-whitelist.js';
-import { MetricsStore } from './metrics-store.js';
+import { MetricsManager } from './metrics-manager.js';
 import { ShimManager } from './shim-manager.js';
 
 /**
@@ -42,8 +42,9 @@ export class AutoShimManager {
       console.error('[claudx] 🔄 Updating common tool shims...');
     }
 
-    const store = new MetricsStore();
-    const manager = new ShimManager(store, path.dirname(this.shimDir));
+    const metricsManager = new MetricsManager();
+    await metricsManager.initialize();
+    const manager = new ShimManager(metricsManager, path.dirname(this.shimDir));
 
     try {
       if (this.shimAll) {
@@ -70,7 +71,7 @@ export class AutoShimManager {
         error instanceof Error ? error.message : String(error)
       );
     } finally {
-      store.close();
+      metricsManager.close();
     }
   }
 

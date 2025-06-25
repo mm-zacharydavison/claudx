@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { MetricsStore } from './metrics-store.js';
+import { MetricsManager } from './metrics-manager.js';
 import { COMMAND_DESCRIPTORS, type ToolMetric } from './types.js';
 
 interface TokenInfo {
@@ -22,7 +22,7 @@ export interface ShimConfig {
 }
 
 export class ShimManager {
-  private metricsStore: MetricsStore;
+  private metricsManager: MetricsManager;
   private shimDir: string;
   private backupDir: string;
   private configFile: string;
@@ -95,8 +95,8 @@ export class ShimManager {
     'tr',
   ]);
 
-  constructor(metricsStore: MetricsStore, baseDir?: string) {
-    this.metricsStore = metricsStore;
+  constructor(metricsManager: MetricsManager, baseDir?: string) {
+    this.metricsManager = metricsManager;
     const base = baseDir || path.join(process.env.HOME || '/tmp', '.claudx');
     this.shimDir = path.join(base, 'shims');
     this.backupDir = path.join(base, 'backups');
@@ -520,9 +520,10 @@ async function saveMetric(metric: ToolMetric): Promise<void> {
   }
 
   try {
-    const metricsStore = new MetricsStore();
-    await metricsStore.saveMetric(metric);
-    metricsStore.close();
+    const metricsManager = new MetricsManager();
+    await metricsManager.initialize();
+    await metricsManager.saveMetric(metric);
+    metricsManager.close();
 
     if (process.env.LOG_LEVEL === 'debug') {
       console.debug('[ShimManager] Successfully saved metric for:', metric.toolName);

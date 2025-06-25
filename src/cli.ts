@@ -5,7 +5,7 @@ import { rmdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Command } from 'commander';
-import { MetricsStore } from './metrics-store.js';
+import { MetricsManager } from './metrics-manager.js';
 import { MetricsSummary } from './types.js';
 
 const program = new Command();
@@ -17,8 +17,9 @@ program
   .description('Show summary of tool execution metrics')
   .option('-l, --limit <number>', 'Limit number of tools shown', '10')
   .action(async (options) => {
-    const store = new MetricsStore();
-    const summary = await store.getMetricsSummary();
+    const manager = new MetricsManager();
+    await manager.initialize();
+    const summary = await manager.getMetricsSummary();
     const limit = Number.parseInt(options.limit);
 
     console.log('Tool Execution Summary');
@@ -32,7 +33,7 @@ program
         'No metrics found. Install shims and use Claude Code with the wrapper to collect metrics.'
       );
       console.log('Run: npm run install-shims');
-      store.close();
+      manager.close();
       return;
     }
 
@@ -70,7 +71,7 @@ program
       ])
     );
 
-    store.close();
+    manager.close();
   });
 
 program
@@ -78,8 +79,9 @@ program
   .description('Show recent tool executions')
   .option('-l, --limit <number>', 'Number of recent executions to show', '20')
   .action(async (options) => {
-    const store = new MetricsStore();
-    const recent = await store.getRecentMetrics(Number.parseInt(options.limit));
+    const manager = new MetricsManager();
+    await manager.initialize();
+    const recent = await manager.getRecentMetrics(Number.parseInt(options.limit));
 
     console.log('Recent Tool Executions');
     console.log('======================');
@@ -90,7 +92,7 @@ program
         'No metrics found. Install shims and use Claude Code with the wrapper to collect metrics.'
       );
       console.log('Run: npm run install-shims');
-      store.close();
+      manager.close();
       return;
     }
 
@@ -108,7 +110,7 @@ program
       }
     }
 
-    store.close();
+    manager.close();
   });
 
 program
@@ -127,10 +129,80 @@ program
       }
     }
 
-    const store = new MetricsStore();
-    // Note: We'd need to add a clear method to MetricsStore
+    const manager = new MetricsManager();
+    await manager.initialize();
+    // Note: We'd need to add a clear method to MetricsManager
     console.log('Metrics cleared.');
-    store.close();
+    manager.close();
+  });
+
+program
+  .command('config')
+  .description('Manage data destinations configuration')
+  .option('--show', 'Show current configuration and config file path')
+  .option('--init', 'Initialize/recreate the configuration file')
+  .option('--path', 'Show configuration file path')
+  .action(async (options) => {
+    const manager = new MetricsManager();
+    const configManager = manager.getConfigManager();
+
+    if (options.path) {
+      console.log('Configuration file path:');
+      console.log(configManager.getConfigPath());
+      return;
+    }
+
+    if (options.init) {
+      await configManager.initializeConfig();
+      console.log('Configuration file initialized at:');
+      console.log(configManager.getConfigPath());
+      console.log('\nEdit this file to configure your data destinations with environment variables.');
+      return;
+    }
+
+    if (options.show) {
+      try {
+        await manager.initialize();
+        const currentConfig = await configManager.getConfig();
+        
+        console.log('Current Data Destinations:');
+        console.log('========================');
+
+        currentConfig.destinations.forEach((dest, index) => {
+          if (dest.options) {
+            for (const [key, value] of Object.entries(dest.options)) {
+              if (typeof value !== 'string') {
+                throw new Error(`Expected string for ${key}, got ${typeof value}`)
+              }
+              if (key === 'apiKey' && value) {
+                console.log(`   ${key}: ${'*'.repeat(8)}${value.slice(-4)}`);
+              } else {
+                console.log(`   ${key}: ${value || 'default'}`);
+              }
+            }
+          }
+          console.log();
+        })
+
+        console.log('Configuration file path:');
+        console.log(configManager.getConfigPath());
+      } catch (error) {
+        console.error('Error loading configuration:', error);
+        console.log('\nTry running: claudx config --init');
+      }
+      return;
+    }
+
+    // Default action - show help
+    console.log('Configuration Management:');
+    console.log('========================');
+    console.log('');
+    console.log('claudx config --show    Show current configuration');
+    console.log('claudx config --init    Initialize configuration file');  
+    console.log('claudx config --path    Show configuration file path');
+    console.log('');
+    console.log('Edit the configuration file directly to add/remove destinations.');
+    console.log('The file supports JavaScript expressions and environment variables.');
   });
 
 program

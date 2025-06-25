@@ -86,3 +86,20 @@ export interface MetricsSummary {
   inputTokens: number;
   outputTokens: number;
 }
+
+export interface ClaudxConfig {
+  destinations: {
+    type: 'sqlite' | 'datadog';
+    options?: {
+      // SQLite options
+      dbPath?: string;
+      
+      // DataDog options
+      apiKey?: string;
+      site?: string;
+      service?: string;
+      env?: string;
+      tags?: Record<string, string>;
+    };
+  }[];
+}
