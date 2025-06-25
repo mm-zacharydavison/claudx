@@ -4,7 +4,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { MetricsManager } from './metrics-manager.js';
-import { COMMAND_DESCRIPTORS, type ToolMetric } from './types.js';
+import type { ToolMetric } from './types.js';
+import { COMMAND_DESCRIPTORS } from './commands.js';
 
 interface TokenInfo {
   inputTokens: number;

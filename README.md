@@ -11,14 +11,22 @@ A tool that automatically measures and tracks execution times for commands used 
 - **Metrics Storage**: Persists metrics to SQLite database for historical analysis
 - **CLI Interface**: View summaries and recent executions via command line
 - **Complete Coverage**: Works with any executable Claude Code uses
+- **DataDog Integration**: Send metrics to DataDog for analysis (requires configuration)
 
 ## How It Works
 
 1. **Shims the `claude` executable** itself - no manual wrapper needed
 2. **Auto-discovers ALL executables** on your PATH when Claude starts
-3. **Creates shimmed executables** in an isolated directory  
-4. **Leaves your system completely untouched** - no permanent PATH modifications
+3. **Creates shimmed executables** in an isolated directory
+4. **Does not affect your own invocations of tools** - your PATH is never modified
 5. **Collects real execution metrics** automatically when Claude runs commands
+
+## Privacy
+
+- Command arguments and working directory are stored for analysis.
+- No file contents or sensitive data is logged.
+- Metrics are stored locally in SQLite database (unless you configure a DataDog destination).
+- Your system environment is never modified.
 
 ## Installation
 
@@ -31,7 +39,17 @@ npm run bootstrap
 
 This creates shims for common development tools that Claude frequently uses (~100 tools).
 
+### Uninstall
+
+```bash
+# Remove claudx (uninstall)
+npm run uninstall
+```
+
 ### Complete Coverage Setup
+
+This will shim all tools on your PATH.
+This isn't recommended, as you probably have around 3000+ tools on your PATH.
 
 ```bash
 npm install
@@ -115,30 +133,9 @@ export default {
 - `options.env`: Environment name (defaults to `development`)
 - `options.tags`: Custom tags to attach to metrics
 
-### Environment Variables
-
-The configuration file supports JavaScript expressions and environment variables:
-
-- `CLAUDX_DB_PATH`: Custom SQLite database path
-- `DATADOG_API_KEY`: DataDog API key
-- `DATADOG_SITE`: DataDog site URL
-- `DATADOG_SERVICE`: DataDog service name
-- `DATADOG_ENV`: DataDog environment
-- `DATADOG_TEAM_NAME`: Team name for DataDog tags
-
 ## Commands
 
-### Installation Management
-
-```bash
-# Install Claudx metrics (one-time setup)
-npm run install
-
-# Remove Claudx metrics (uninstall)
-npm run uninstall
-```
-
-### Viewing Metrics
+### Viewing Metrics (SQLite only)
 
 ```bash
 # View summary of all tools
@@ -172,17 +169,8 @@ npm run lint
 npm test
 ```
 
-## Privacy
-
-- Command arguments and working directory are stored for analysis
-- No file contents or sensitive data is logged
-- Metrics are stored locally in SQLite database
-- Your system environment is never modified
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+```bash
+# Run with debug logging
+# (warning, this will emit noise into the tool responses consumed by claude)
+LOG_LEVEL=debug claude
+```
