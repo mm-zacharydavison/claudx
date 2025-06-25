@@ -100,7 +100,7 @@ Claudx can be configured using a `claudx.config.js` file. The configuration file
 
 ```javascript
 // claudx.config.js
-export default {
+module.exports = {
   destinations: [
     {
       type: 'sqlite',

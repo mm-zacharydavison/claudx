@@ -17,7 +17,7 @@ program
   .description('Show summary of tool execution metrics')
   .option('-l, --limit <number>', 'Limit number of tools shown', '10')
   .action(async (options) => {
-    const manager = new MetricsManager();
+    const manager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     await manager.initialize();
     const summary = await manager.getMetricsSummary();
     const limit = Number.parseInt(options.limit);
@@ -79,7 +79,7 @@ program
   .description('Show recent tool executions')
   .option('-l, --limit <number>', 'Number of recent executions to show', '20')
   .action(async (options) => {
-    const manager = new MetricsManager();
+    const manager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     await manager.initialize();
     const recent = await manager.getRecentMetrics(Number.parseInt(options.limit));
 
@@ -129,7 +129,7 @@ program
       }
     }
 
-    const manager = new MetricsManager();
+    const manager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     await manager.initialize();
     // Note: We'd need to add a clear method to MetricsManager
     console.log('Metrics cleared.');
@@ -143,7 +143,7 @@ program
   .option('--init', 'Initialize/recreate the configuration file')
   .option('--path', 'Show configuration file path')
   .action(async (options) => {
-    const manager = new MetricsManager();
+    const manager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     const configManager = manager.getConfigManager();
 
     if (options.path) {

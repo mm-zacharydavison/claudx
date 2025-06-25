@@ -83,6 +83,14 @@ export class ShimManager {
     'node',
     'npm',
     'bun', // We'll handle these specially if needed
+    // Git operations (We use this to find the git root for config, so this prevents infinite loop)
+    'git',
+    // Core file operations that can cause infinite loops
+    'cat',
+    'ls',
+    'find',
+    'which',
+    'whereis',
     // Noisy claude invocations (claude likes to use these behind the scenes and they're not very useful to track)
     'tail',
     'head',
@@ -240,11 +248,14 @@ export class ShimManager {
     const metricsCollectorPath = path.resolve(currentDir, '../dist/metrics-collector.js');
 
     return `#!/bin/bash
-# Claudx Metrics Shim for ${executable}
+# claudx shim for ${executable}
 # Generated on ${new Date().toISOString()}
 
-# Collect metrics (pass debug flag if present)
-node $DEBUG_FLAG "${metricsCollectorPath}" "${executable}" "${originalPath}" "$@"
+# Pass the original working directory to the metrics collector
+export CLAUDX_ORIGINAL_CWD="\$PWD"
+
+# Collect metrics
+node "${metricsCollectorPath}" "${executable}" "${originalPath}" "$@"
 `;
   }
 
@@ -521,7 +532,7 @@ async function saveMetric(metric: ToolMetric): Promise<void> {
   }
 
   try {
-    const metricsManager = new MetricsManager();
+    const metricsManager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     await metricsManager.initialize();
     await metricsManager.saveMetric(metric);
     metricsManager.close();

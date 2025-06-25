@@ -7,6 +7,8 @@ import type { ClaudxConfig } from './types.js';
 
 export class ConfigManager {
   private configPath: string;
+  private static configCache: Map<string, ClaudxConfig> = new Map();
+  private static configPromises: Map<string, Promise<ClaudxConfig>> = new Map();
   private defaultConfigTemplate = `// claudx configuration file
 // http://github.com/mm-zacharydavison/claudx
 // This file supports JavaScript expressions and environment variables
@@ -47,13 +49,13 @@ export default {
     ],
   };
 
-  constructor(configPath?: string) {
+  constructor(configPath?: string, originalCwd?: string) {
     if (configPath) {
       this.configPath = configPath;
     } else {
       // Try to find config in order: current dir, git root, home dir
-      const currentDirConfig = join(process.cwd());
-      const gitRootConfig = this.findGitRoot();
+      const currentDirConfig = join(originalCwd || process.cwd());
+      const gitRootConfig = this.findGitRoot(originalCwd);
       const homeDirConfig = join(homedir(), '.claudx');
 
       let configDir: string;
@@ -70,11 +72,17 @@ export default {
       }
 
       this.configPath = join(configDir, 'claudx.config.js');
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug(`[claudx] Using config ${this.configPath}`)
+      }
     }
   }
 
   async getConfig(): Promise<ClaudxConfig> {
     if (!existsSync(this.configPath)) {
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug(`[claudx] Config ${this.configPath} does not exist. Using default config.`)
+      }
       // Create default config if it doesn't exist
       this.createDefaultConfig();
       return this.defaultConfig;
@@ -85,6 +93,10 @@ export default {
       const configUrl = pathToFileURL(this.configPath).href;
       const configModule = await import(`${configUrl}?t=${Date.now()}`);
       const config = configModule.default as ClaudxConfig;
+
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.debug(`[claudx] loaded config ${configUrl} with destinations:`, config.destinations.map(d => d.type))
+      }
 
       // Validate and provide defaults
       if (!config.destinations || config.destinations.length === 0) {
@@ -116,11 +128,11 @@ export default {
     return Promise.resolve();
   }
 
-  private findGitRoot(): string | null {
+  private findGitRoot(originalCwd?: string): string | null {
     try {
       const gitRoot = execSync('git rev-parse --show-toplevel', { 
         encoding: 'utf8',
-        cwd: process.cwd(),
+        cwd: originalCwd || process.cwd(),
         stdio: 'pipe'
       }).trim();
       return gitRoot;

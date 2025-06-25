@@ -57,6 +57,13 @@ find_claude_code() {
             exit 1
         fi
     else
+        # Check if claude is installed via npm
+        if [[ "$ORIGINAL_CLAUDE_CODE" == *"/node_modules/.bin/claude"* ]] || [[ "$ORIGINAL_CLAUDE_CODE" == *"npm"* ]] || [[ -L "$ORIGINAL_CLAUDE_CODE" && $(readlink "$ORIGINAL_CLAUDE_CODE") == *"/node_modules/"* ]]; then
+            echo "⚠️  Claude appears to be installed via npm."
+            echo "    Please run '/migrate-installer' within claude first to migrate to the official installer."
+            echo "    Then re-run this bootstrap script."
+            exit 1
+        fi
         echo "✅ Found claude at: $ORIGINAL_CLAUDE_CODE"
     fi
 }
@@ -101,6 +108,9 @@ ORIGINAL_CLAUDE_CODE="$INSTALL_DIR/claude.original"
 AUTO_SHIM_SOURCE="$AUTO_SHIM_SOURCE"
 PROJECT_DIR="$PROJECT_DIR"
 SHIM_ALL_FLAG="$SHIM_ALL"
+
+# Pass the origin working directory to claudx for resolving configs.
+export CLAUDX_ORIGINAL_CWD="\$PWD"
 
 # Function to generate shims on demand
 ensure_shims_updated() {
@@ -150,6 +160,15 @@ setup_path() {
             SHELL_RC="$HOME/.profile"
             ;;
     esac
+    
+    # Comment out any existing claude alias that might override our PATH entry
+    echo "🗑️  Commenting out existing claude alias..."
+    if [ -f "$SHELL_RC" ]; then
+        # Comment out lines that set claude alias
+        sed -i 's/^alias claude.*\.claude\/local\/claude/# &/' "$SHELL_RC" 2>/dev/null || true
+        sed -i 's/^alias claude=/# &/' "$SHELL_RC" 2>/dev/null || true
+        echo "✅ Commented out existing claude aliases"
+    fi
     
     # Check if already in PATH
     if ! grep -q "claudx" "$SHELL_RC" 2>/dev/null; then

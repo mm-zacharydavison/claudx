@@ -7,12 +7,11 @@ export class MetricsManager {
   private destinations: DataDestination[] = [];
   private configManager: ConfigManager;
 
-  constructor(configPath?: string) {
-    this.configManager = new ConfigManager(configPath);
+  constructor(configPath?: string, originalCwd?: string) {
+    this.configManager = new ConfigManager(configPath, originalCwd);
   }
 
   async initialize(): Promise<void> {
-    await this.configManager.initializeConfig();
     const config = await this.configManager.getConfig();
 
     if (process.env.LOG_LEVEL === 'debug') {

@@ -42,7 +42,7 @@ export class AutoShimManager {
       console.error('[claudx] 🔄 Updating common tool shims...');
     }
 
-    const metricsManager = new MetricsManager();
+    const metricsManager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     await metricsManager.initialize();
     const manager = new ShimManager(metricsManager, path.dirname(this.shimDir));
 

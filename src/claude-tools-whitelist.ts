@@ -4,7 +4,6 @@
  */
 export const CLAUDE_TOOLS_WHITELIST = [
   // Version control
-  'git',
   'gh',
   'svn',
   'hg',

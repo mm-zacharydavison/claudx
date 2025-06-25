@@ -1,7 +1,7 @@
 // claudx configuration file
 // This file supports JavaScript expressions and environment variables
 
-export default {
+module.exports = {
   destinations: [
     {
       type: 'sqlite',
@@ -10,8 +10,8 @@ export default {
         // dbPath: process.env.CLAUDX_DB_PATH || undefined
       }
     },
-    
-    // Example DataDog destination (uncomment and configure):
+
+    // Datadog destination
     {
       type: 'datadog',
       options: {

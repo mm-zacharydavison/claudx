@@ -6,6 +6,11 @@
 
 ## Integration
 - [x] Starting `claude` will not be slower than normal.
+- [x] `claudx` will support `fish`.
+- [ ] `claudx` will support `zsh`.
+
+## Shims
+- [x] `git` will not be shimmed (causes infinite process spawning).
 
 ## Metrics
 - [x] Collects metrics for all common tools Claude invokes (see `src/tools.ts`).
@@ -16,8 +21,8 @@
 
 ## Configuration
 - [x] Can be configured to send metrics to destinations.
-- [x] Configuration can be local in the current directory, or in the home directory.
-- [x] Search up to the `git` root to find a configuration file.
+- [x] Configuration can be local in the current directory where `claude` was invoked, or in the home directory.
+- [x] Search up to the `git` root from the directory where `claude` was invoked to find a configuration file.
 
 ## Destinations
 - [x] Supports sending to multiple destinations.

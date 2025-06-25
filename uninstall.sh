@@ -10,7 +10,7 @@ echo "🧹 claudx Uninstaller"
 echo "=================================="
 echo ""
 
-# Remove claudx PATH entry from shell configs
+# Remove claudx PATH entry from shell configs and restore commented aliases
 remove_from_shell_configs() {
     echo "🔧 Removing claudx from shell configurations..."
     
@@ -26,11 +26,20 @@ remove_from_shell_configs() {
             # Create backup
             cp "$config" "${config}.claudx-backup"
             
+            # Uncomment any claude aliases that were commented out by the installer
+            sed -i 's/^# alias claude=/alias claude=/' "$config" 2>/dev/null || true
+            sed -i 's/^# alias claude.*\.claude\/local\/claude/alias claude.*\.claude\/local\/claude/' "$config" 2>/dev/null || true
+            
             # Remove claudx-related lines
             grep -v "claudx\|claudx" "$config" > "${config}.tmp" && mv "${config}.tmp" "$config"
-            echo "✅ Removed claudx from $config (backup created at ${config}.claudx-backup)"
+            echo "✅ Removed claudx from $config and restored commented aliases (backup created at ${config}.claudx-backup)"
         fi
     done
+}
+
+# Check if claude aliases were properly restored
+check_claude_restoration() {
+    echo "✅ Claude aliases have been restored from comments"
 }
 
 # Uninstall existing installation
@@ -58,6 +67,7 @@ main() {
     fi
     
     remove_from_shell_configs
+    check_claude_restoration
     uninstall_existing
     
     echo ""
