@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { homedir, cwd } from 'node:os';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ClaudxConfig } from './types.js';
@@ -52,7 +52,7 @@ export default {
       // Try current directory first, then home directory
       const currentDirConfig = join(process.cwd());
       const homeDirConfig = join(homedir(), '.claudx');
-      
+
       let configDir: string;
       if (existsSync(currentDirConfig)) {
         configDir = currentDirConfig;
@@ -63,7 +63,7 @@ export default {
         configDir = currentDirConfig;
         mkdirSync(configDir, { recursive: true });
       }
-      
+
       this.configPath = join(configDir, 'claudx.config.js');
     }
   }

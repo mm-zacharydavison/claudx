@@ -65,6 +65,67 @@ claude
 - ✅ **Safe and reversible** - easy to uninstall with no traces
 - ✅ **No Claude Code modifications** required
 
+## Configuration
+
+Claudx can be configured using a `claudx.config.js` file. The configuration file will be automatically created in your current directory (or `~/.claudx/`) when Claudx first runs.
+
+### Configuration File Structure
+
+```javascript
+// claudx.config.js
+export default {
+  destinations: [
+    {
+      type: 'sqlite',
+      options: {
+        // Optional custom database path
+        dbPath: process.env.CLAUDX_DB_PATH || undefined
+      }
+    },
+    
+    // DataDog destination (optional)
+    {
+      type: 'datadog',
+      options: {
+        apiKey: process.env.DATADOG_API_KEY,
+        site: process.env.DATADOG_SITE || 'datadoghq.com',
+        service: process.env.DATADOG_SERVICE || 'claudx',
+        env: process.env.DATADOG_ENV || 'development',
+        tags: {
+          team: process.env.DATADOG_TEAM_NAME || 'claudx-developers',
+          // Add more custom tags as needed
+        }
+      }
+    }
+  ]
+};
+```
+
+### Configuration Options
+
+#### SQLite Destination
+- `type`: Must be `'sqlite'`
+- `options.dbPath`: Optional custom path for the SQLite database file
+
+#### DataDog Destination
+- `type`: Must be `'datadog'`
+- `options.apiKey`: Your DataDog API key (required)
+- `options.site`: DataDog site (defaults to `datadoghq.com`)
+- `options.service`: Service name for metrics (defaults to `claudx`)
+- `options.env`: Environment name (defaults to `development`)
+- `options.tags`: Custom tags to attach to metrics
+
+### Environment Variables
+
+The configuration file supports JavaScript expressions and environment variables:
+
+- `CLAUDX_DB_PATH`: Custom SQLite database path
+- `DATADOG_API_KEY`: DataDog API key
+- `DATADOG_SITE`: DataDog site URL
+- `DATADOG_SERVICE`: DataDog service name
+- `DATADOG_ENV`: DataDog environment
+- `DATADOG_TEAM_NAME`: Team name for DataDog tags
+
 ## Commands
 
 ### Installation Management
@@ -89,16 +150,6 @@ npm run cli recent
 # Clear all metrics
 npm run cli clear
 ```
-
-## Architecture
-
-- `install.sh` - One-command installer that shims Claude
-- `src/auto-shim.ts` - Auto-discovery and shim management
-- `src/shim-manager.ts` - Creates and manages executable shims
-- `src/metrics-collector.ts` - Collects metrics when shims are executed
-- `src/metrics-store.ts` - SQLite database interface
-- `src/cli.ts` - Command line interface for viewing metrics
-- `src/types.ts` - TypeScript type definitions
 
 ## Metrics Collected
 

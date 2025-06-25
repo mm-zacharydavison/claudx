@@ -43,11 +43,7 @@ export class MetricsStore {
     if (existsSync(this.dbPath)) {
       dbData = readFileSync(this.dbPath);
       if (process.env.LOG_LEVEL === 'debug') {
-        console.debug(
-          '[claudx] Loaded existing database file, size:',
-          dbData.length,
-          'bytes'
-        );
+        console.debug('[claudx] Loaded existing database file, size:', dbData.length, 'bytes');
       }
     } else {
       if (process.env.LOG_LEVEL === 'debug') {

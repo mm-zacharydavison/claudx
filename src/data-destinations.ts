@@ -22,7 +22,9 @@ export interface DataDestinationConfig {
   };
 }
 
-export async function createDataDestination(config: DataDestinationConfig): Promise<DataDestination> {
+export async function createDataDestination(
+  config: DataDestinationConfig
+): Promise<DataDestination> {
   switch (config.type) {
     case 'sqlite': {
       const { SQLiteDestination } = await import('./destinations/sqlite-destination.js');
