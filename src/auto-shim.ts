@@ -37,9 +37,9 @@ export class AutoShimManager {
 
   async updateShims(): Promise<void> {
     if (this.shimAll) {
-      console.error('🔄 Updating all executable shims...');
+      console.error('[claudx] 🔄 Updating all executable shims...');
     } else {
-      console.error('🔄 Updating common tool shims...');
+      console.error('[claudx] 🔄 Updating common tool shims...');
     }
 
     const store = new MetricsStore();
@@ -58,15 +58,15 @@ export class AutoShimManager {
             availableTools.push(tool);
           }
         }
-        console.error(`📋 Found ${availableTools.length} whitelisted tools available`);
+        console.error(`[claudx] 📋 Found ${availableTools.length} whitelisted tools available`);
         await manager.installShims(availableTools);
       }
 
       await fs.writeFile(this.timestampFile, Date.now().toString());
-      console.error('✅ Shims updated successfully');
+      console.error('[claudx] ✅ Shims updated successfully');
     } catch (error) {
       console.error(
-        '⚠️  Shim update failed:',
+        '[claudx] ⚠️  Shim update failed:',
         error instanceof Error ? error.message : String(error)
       );
     } finally {
@@ -78,7 +78,7 @@ export class AutoShimManager {
     if (await this.shouldUpdateShims()) {
       await this.updateShims();
     } else {
-      console.error('✅ Shims are up to date');
+      console.error('[claudx] ✅ Shims are up to date');
     }
   }
 }
@@ -91,7 +91,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const autoShim = new AutoShimManager(baseDir, shimAll);
 
   autoShim.ensureShimsUpdated().catch((error) => {
-    console.error('❌ Auto-shim failed:', error instanceof Error ? error.message : String(error));
+    console.error('[claudx] ❌ Auto-shim failed:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }

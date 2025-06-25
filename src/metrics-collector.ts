@@ -7,7 +7,7 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length < 2) {
-    console.error('Usage: metrics-collector <executable> <original-path> [args...]');
+    console.error('[claudx] Usage: metrics-collector <executable> <original-path> [args...]');
     process.exit(1);
   }
 
@@ -17,6 +17,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Metrics collector failed:', error);
+  console.error('[claudx] Metrics collector failed:', error);
   process.exit(1);
 });

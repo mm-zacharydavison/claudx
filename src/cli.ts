@@ -160,9 +160,9 @@ program
 
     try {
       await rmdir(metricsDir, { recursive: true });
-      console.log('Successfully removed ~/.claudx directory.');
+      console.log('[claudx] Successfully removed ~/.claudx directory.');
     } catch (error) {
-      console.error('Failed to remove ~/.claudx directory:', error);
+      console.error('[claudx] Failed to remove ~/.claudx directory:', error);
       process.exit(1);
     }
   });

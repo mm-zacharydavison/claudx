@@ -464,7 +464,7 @@ export async function collectAndExecute(
     });
 
     console.error(
-      `Shim execution failed: ${error instanceof Error ? error.message : String(error)}`
+      `[claudx] Shim execution failed: ${error instanceof Error ? error.message : String(error)}`
     );
     process.exit(1);
   }
