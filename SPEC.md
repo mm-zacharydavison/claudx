@@ -17,7 +17,7 @@
 ## Configuration
 - [x] Can be configured to send metrics to destinations.
 - [x] Configuration can be local in the current directory, or in the home directory.
-- [ ] Search up to the `git` root to find a configuration file.
+- [x] Search up to the `git` root to find a configuration file.
 
 ## Destinations
 - [x] Supports sending to multiple destinations.

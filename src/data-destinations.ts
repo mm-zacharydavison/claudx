@@ -32,7 +32,7 @@ export async function createDataDestination(
     }
 
     case 'datadog': {
-      const { DataDogDestination } = await import('./destinations/datadog-destination.unused.js');
+      const { DataDogDestination } = await import('./destinations/datadog-destination.js');
       return new DataDogDestination({
         apiKey: config.options?.apiKey || '',
         site: config.options?.site || 'datadoghq.com',

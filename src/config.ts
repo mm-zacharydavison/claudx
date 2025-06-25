@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { execSync } from 'node:child_process';
 import type { ClaudxConfig } from './types.js';
 
 export class ConfigManager {
@@ -50,17 +51,20 @@ export default {
     if (configPath) {
       this.configPath = configPath;
     } else {
-      // Try current directory first, then home directory
+      // Try to find config in order: current dir, git root, home dir
       const currentDirConfig = join(process.cwd());
+      const gitRootConfig = this.findGitRoot();
       const homeDirConfig = join(homedir(), '.claudx');
 
       let configDir: string;
-      if (existsSync(currentDirConfig)) {
+      if (existsSync(join(currentDirConfig, 'claudx.config.js'))) {
         configDir = currentDirConfig;
+      } else if (gitRootConfig && existsSync(join(gitRootConfig, 'claudx.config.js'))) {
+        configDir = gitRootConfig;
       } else if (existsSync(homeDirConfig)) {
         configDir = homeDirConfig;
       } else {
-        // Default to current directory if neither exists
+        // Default to current directory if no config found
         configDir = currentDirConfig;
         mkdirSync(configDir, { recursive: true });
       }
@@ -110,6 +114,19 @@ export default {
     );
     console.log(`[claudx] Config file location: ${this.configPath}`);
     return Promise.resolve();
+  }
+
+  private findGitRoot(): string | null {
+    try {
+      const gitRoot = execSync('git rev-parse --show-toplevel', { 
+        encoding: 'utf8',
+        cwd: process.cwd(),
+        stdio: 'pipe'
+      }).trim();
+      return gitRoot;
+    } catch {
+      return null;
+    }
   }
 
   getConfigPath(): string {
