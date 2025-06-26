@@ -97,7 +97,7 @@ Claudx can be configured using a `claudx.config.js` file. The configuration file
 ### Configuration File Structure
 
 ```javascript
-// claudx.config.js
+// claudx.config.cjs
 module.exports = {
   dataStores: [
     {
@@ -125,20 +125,6 @@ module.exports = {
   ]
 };
 ```
-
-### Configuration Options
-
-#### SQLite DataStore
-- `type`: Must be `'sqlite'`
-- `options.dbPath`: Optional custom path for the SQLite database file
-
-#### DataDog DataStore
-- `type`: Must be `'datadog'`
-- `options.apiKey`: Your DataDog API key (required)
-- `options.site`: DataDog site (defaults to `datadoghq.com`)
-- `options.service`: Service name for metrics (defaults to `claudx`)
-- `options.env`: Environment name (defaults to `development`)
-- `options.tags`: Custom tags to attach to metrics
 
 ## Commands
 

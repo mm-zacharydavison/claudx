@@ -196,8 +196,9 @@ setup_path() {
 check_existing_installation() {
     local has_installation=false
     
-    # Check for installation directory
-    if [ -d "$INSTALL_DIR" ]; then
+    # Check for actual claudx installation (claude shim + shell config)
+    # Just having ~/.claudx directory isn't enough - need to check for active installation
+    if [ -f "$INSTALL_DIR/claude" ]; then
         has_installation=true
     fi
     
@@ -244,7 +245,6 @@ main() {
       echo "     - Creates shims for common development tools"
       echo "     - Sets up an isolated environment"
       echo "     - Collects metrics for tool usage"
-      echo "   • For complete coverage, use: ./bootstrap.sh --shim-all"
     fi
     echo ""
     echo "💡 Next steps:"
