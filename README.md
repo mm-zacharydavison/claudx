@@ -54,23 +54,6 @@ This creates shims for common development tools that Claude frequently uses (~10
 npx claudx uninstall
 ```
 
-### Complete Coverage Setup
-
-This will shim all tools on your PATH.
-This isn't recommended, as you probably have around 3000+ tools on your PATH.
-
-```bash
-npx claudx bootstrap:all
-```
-
-This discovers and shims ALL executables on your PATH (~3000+ tools) - slower but provides complete coverage.
-
-The installer will:
-- Find your existing `claude` executable
-- Create a shim that wraps it with metrics collection
-- Create shims for tools (common tools by default, or all with `--shim-all`)
-- Add the shim to your PATH so `claude` just works
-
 ## Usage
 
 Just use Claude normally - metrics are collected automatically:
@@ -99,7 +82,7 @@ Claudx can be configured using a `claudx.config.js` file. The configuration file
 ```javascript
 // claudx.config.cjs
 module.exports = {
-  dataStores: [
+  datastores: [
     {
       type: 'sqlite',
       options: {
