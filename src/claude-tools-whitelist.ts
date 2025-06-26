@@ -1,6 +1,6 @@
 /**
  * Whitelist of common tools that Claude Code frequently uses
- * This provides good coverage while keeping shim creation fast
+ * This provides good coverage while keeping shim creation fast.
  */
 export const CLAUDE_TOOLS_WHITELIST = [
   // Version control

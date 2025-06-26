@@ -1,11 +1,11 @@
-import type { DataDestination } from '../data-destinations.js';
-import { MetricsStore } from '../metrics-store.js';
-import type { MetricsSummary, ToolMetric } from '../types.js';
+import type { DataStore } from '../datastore';
+import { MetricsStore } from '../metrics-store';
+import type { MetricsSummary, ToolMetric } from '../types';
 
-export class SQLiteDestination implements DataDestination {
+export class SQLiteDataStore implements DataStore {
   private metricsStore: MetricsStore;
 
-  constructor(dbPath?: string) {
+  constructor(dbPath: string) {
     this.metricsStore = new MetricsStore(dbPath);
   }
 

@@ -3,9 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { MetricsManager } from './metrics-manager.js';
-import type { ToolMetric } from './types.js';
-import { COMMAND_DESCRIPTORS } from './commands.js';
+import { MetricsManager } from './metrics-manager';
+import type { ToolMetric } from './types';
+import { COMMAND_DESCRIPTORS } from './commands';
 
 interface TokenInfo {
   inputTokens: number;

@@ -1,23 +1,42 @@
-import type { DataDestination } from '../data-destinations.js';
-import type { MetricsSummary, ToolMetric } from '../types.js';
+import type { DataStore } from '../datastore';
+import type { MetricsSummary, ToolMetric } from '../types';
 
+/**
+ * Configuration for DataDog dataStores.
+ */
 export interface DataDogConfig {
+  /** Datadog API key */
   apiKey: string;
+  /** Datadog site (e.g. datadoghq.com) */
   site: string;
+  /** Service to attribute metrics to (e.g. `claudx`) */
   service: string;
+  /** Environment to attribute metrics to (e.g. `staging`) */
   env: string;
+  /** Any additional tags to attribute to metrics. */
   tags: Record<string, string>;
 }
 
+/**
+ * A single DataDog metric point to submit to DataDog.
+ */
 interface DataDogMetric {
+  /** Metric name */
   metric: string;
+  /** Data points */
   points: [number, number][];
+  /** Tags */
   tags: string[];
+  /** The source host of these metrics */
   host: string;
+  /** The type of metric, see DataDog docs */
   type: 'gauge' | 'count' | 'rate';
 }
 
-export class DataDogDestination implements DataDestination {
+/**
+ * Stores data in DataDog.
+ */
+export class DataDogDataStore implements DataStore {
   private config: DataDogConfig;
   private metricsBuffer: ToolMetric[] = [];
   private isInitialized = false;
@@ -28,7 +47,7 @@ export class DataDogDestination implements DataDestination {
     this.config = config;
 
     if (process.env.LOG_LEVEL === 'debug') {
-      console.debug('[claudx] DataDog destination created (lazy initialization):', {
+      console.debug('[claudx] DataDog dataStore created (lazy initialization):', {
         site: config.site,
         service: config.service,
         env: config.env,
@@ -89,12 +108,12 @@ export class DataDogDestination implements DataDestination {
   }
 
   async getMetricsSummary(): Promise<MetricsSummary[]> {
-    // DataDog destination only supports pushing data
+    // DataDog dataStore only supports pushing data
     return [];
   }
 
   async getRecentMetrics(): Promise<ToolMetric[]> {
-    // DataDog destination only supports pushing data
+    // DataDog dataStore only supports pushing data
     return [];
   }
 

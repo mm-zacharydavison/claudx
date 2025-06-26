@@ -2,13 +2,16 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { CLAUDE_TOOLS_WHITELIST } from './claude-tools-whitelist.js';
-import { MetricsManager } from './metrics-manager.js';
-import { ShimManager } from './shim-manager.js';
+import { CLAUDE_TOOLS_WHITELIST } from './claude-tools-whitelist';
+import { MetricsManager } from './metrics-manager';
+import { ShimManager } from './shim-manager';
 
 /**
- * Auto-shim manager for claudx startup
- * This runs when claudx starts to ensure all shims are current
+ * Auto-shim manager for claudx startup.
+ * 
+ * Manages creating a set of shimmed PATH binaries that `claudx` sees.
+ * 
+ * This runs when claudx starts to ensure all shims are current.
  */
 export class AutoShimManager {
   private shimDir: string;
@@ -22,6 +25,10 @@ export class AutoShimManager {
     this.shimAll = shimAll;
   }
 
+  /**
+   * Returns `true` if shims need to be updated.
+   * Shims need to be updated if they have not been updated in 24 hours.
+   */
   async shouldUpdateShims(): Promise<boolean> {
     try {
       const timestamp = await fs.readFile(this.timestampFile, 'utf8');
@@ -35,6 +42,13 @@ export class AutoShimManager {
     }
   }
 
+  /**
+   * Updates shims.
+   * 
+   * If `this.shimAll` is `true`, will update every tool found in $PATH.
+   * Otherwise, a limited subset is updated (common tools that Claude uses that you may want to track).
+   * @see `CLAUDE_TOOLS_WHITELIST`
+   */
   async updateShims(): Promise<void> {
     if (this.shimAll) {
       console.error('[claudx] 🔄 Updating all executable shims...');
@@ -75,6 +89,9 @@ export class AutoShimManager {
     }
   }
 
+  /**
+   * Updates shims if they need to be updated, based on `this.shouldUpdateShims`.
+   */
   async ensureShimsUpdated(): Promise<void> {
     if (await this.shouldUpdateShims()) {
       await this.updateShims();

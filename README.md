@@ -34,7 +34,7 @@ e.g:
 
 - Command arguments and working directory are stored for analysis.
 - No file contents or sensitive data is logged.
-- Metrics are stored locally in SQLite database (unless you configure a DataDog destination).
+- Metrics are stored locally in SQLite database (unless you configure a DataDog dataStore).
 - Your system environment is never modified.
 
 ## Installation
@@ -101,7 +101,7 @@ Claudx can be configured using a `claudx.config.js` file. The configuration file
 ```javascript
 // claudx.config.js
 module.exports = {
-  destinations: [
+  dataStores: [
     {
       type: 'sqlite',
       options: {
@@ -110,7 +110,7 @@ module.exports = {
       }
     },
     
-    // DataDog destination (optional)
+    // DataDog dataStore (optional)
     {
       type: 'datadog',
       options: {
@@ -130,11 +130,11 @@ module.exports = {
 
 ### Configuration Options
 
-#### SQLite Destination
+#### SQLite DataStore
 - `type`: Must be `'sqlite'`
 - `options.dbPath`: Optional custom path for the SQLite database file
 
-#### DataDog Destination
+#### DataDog DataStore
 - `type`: Must be `'datadog'`
 - `options.apiKey`: Your DataDog API key (required)
 - `options.site`: DataDog site (defaults to `datadoghq.com`)

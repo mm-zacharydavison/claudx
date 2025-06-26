@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { collectAndExecute } from './shim-manager.js';
+import { collectAndExecute } from './shim-manager';
 
 // This script is called by shims to collect metrics and execute the original command
 async function main() {

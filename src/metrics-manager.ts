@@ -1,10 +1,9 @@
-import { ConfigManager } from './config.js';
-import type { DataDestination } from './data-destinations.js';
-import { createDataDestination } from './data-destinations.js';
-import type { MetricsSummary, ToolMetric } from './types.js';
+import { ConfigManager } from './config';
+import { type DataStore, createDataStore } from './datastore';
+import type { MetricsSummary, ToolMetric } from './types';
 
 export class MetricsManager {
-  private destinations: DataDestination[] = [];
+  private dataStores: DataStore[] = [];
   private configManager: ConfigManager;
 
   constructor(configPath?: string, originalCwd?: string) {
@@ -16,38 +15,38 @@ export class MetricsManager {
 
     if (process.env.LOG_LEVEL === 'debug') {
       console.debug(
-        '[claudx] Initializing with destinations:',
-        config.destinations.map((d) => d.type)
+        '[claudx] Initializing with dataStores:',
+        config.dataStores.map((d) => d.type)
       );
     }
 
-    // Create destination instances
-    for (const destinationConfig of config.destinations) {
+    // Create dataStore instances
+    for (const dataStoreConfig of config.dataStores) {
       try {
-        const destination = await createDataDestination(destinationConfig);
-        this.destinations.push(destination);
+        const dataStore = await createDataStore(dataStoreConfig);
+        this.dataStores.push(dataStore);
       } catch (error) {
         console.error(
-          `[claudx] Failed to initialize ${destinationConfig.type} destination:`,
+          `[claudx] Failed to initialize ${dataStoreConfig.type} dataStore:`,
           error
         );
       }
     }
 
-    if (this.destinations.length === 0) {
-      console.warn('[claudx] No destinations initialized, falling back to SQLite');
-      const fallbackDestination = await createDataDestination({ type: 'sqlite' });
-      this.destinations.push(fallbackDestination);
+    if (this.dataStores.length === 0) {
+      console.warn('[claudx] No dataStores initialized, falling back to SQLite');
+      const fallbackDataStore = await createDataStore({ type: 'sqlite' });
+      this.dataStores.push(fallbackDataStore);
     }
   }
 
   async saveMetric(metric: ToolMetric): Promise<void> {
-    // Save to all configured destinations
-    const promises = this.destinations.map(async (destination) => {
+    // Save to all configured dataStores
+    const promises = this.dataStores.map(async (dataStore) => {
       try {
-        await destination.saveMetric(metric);
+        await dataStore.saveMetric(metric);
       } catch (error) {
-        console.error('[claudx] Error saving metric to destination:', error);
+        console.error('[claudx] Error saving metric to dataStore:', error);
       }
     });
 
@@ -55,10 +54,10 @@ export class MetricsManager {
   }
 
   async getMetricsSummary(): Promise<MetricsSummary[]> {
-    // Get summary from the first available destination (typically SQLite)
-    for (const destination of this.destinations) {
+    // Get summary from the first available dataStore (typically SQLite)
+    for (const dataStore of this.dataStores) {
       try {
-        return await destination.getMetricsSummary();
+        return await dataStore.getMetricsSummary();
       } catch (error) {
         console.error('[claudx] Error getting metrics summary:', error);
       }
@@ -68,10 +67,10 @@ export class MetricsManager {
   }
 
   async getRecentMetrics(limit?: number): Promise<ToolMetric[]> {
-    // Get recent metrics from the first available destination (typically SQLite)
-    for (const destination of this.destinations) {
+    // Get recent metrics from the first available dataStore (typically SQLite)
+    for (const dataStore of this.dataStores) {
       try {
-        return await destination.getRecentMetrics(limit);
+        return await dataStore.getRecentMetrics(limit);
       } catch (error) {
         console.error('[claudx] Error getting recent metrics:', error);
       }
@@ -81,14 +80,14 @@ export class MetricsManager {
   }
 
   close(): void {
-    for (const destination of this.destinations) {
+    for (const dataStore of this.dataStores) {
       try {
-        destination.close();
+        dataStore.close();
       } catch (error) {
-        console.error('[claudx] Error closing destination:', error);
+        console.error('[claudx] Error closing dataStore:', error);
       }
     }
-    this.destinations = [];
+    this.dataStores = [];
   }
 
   getConfigManager(): ConfigManager {

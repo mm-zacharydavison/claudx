@@ -16,14 +16,10 @@ while [[ $# -gt 0 ]]; do
       SHIM_ALL=true
       shift
       ;;
-    --uninstall)
-      uninstall_only
-      ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--shim-all] [--uninstall]"
+      echo "Usage: $0 [--shim-all]"
       echo "  --shim-all   Shim all executables on PATH (slower but complete coverage)"
-      echo "  --uninstall  Remove claudx installation completely"
       exit 1
       ;;
   esac
@@ -182,26 +178,9 @@ setup_path() {
     fi
 }
 
-# Uninstall existing installation
-uninstall_existing() {
-    echo "🧹 Cleaning up existing installation..."
-    if [ -d "$INSTALL_DIR" ]; then
-        rm -rf "$INSTALL_DIR"
-        echo "✅ Removed existing installation"
-    else
-        echo "✅ No existing installation found"
-    fi
-}
-
-# Run standalone uninstall
-uninstall_only() {
-    ./uninstall.sh
-    exit 0
-}
-
 # Main installation process
 main() {
-    uninstall_existing
+    ./uninstall.sh
     find_claude_code
     setup_directories
     build_system

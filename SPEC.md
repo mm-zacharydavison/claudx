@@ -20,12 +20,12 @@
 - [x] Tools which are often used as `tool command` format can be collected as unique tools (e.g. `pnpm install` vs `pnpm run`).
 
 ## Configuration
-- [x] Can be configured to send metrics to destinations.
+- [x] Can be configured to send metrics to dataStores.
 - [x] Configuration can be local in the current directory where `claude` was invoked, or in the home directory.
 - [x] Search up to the `git` root from the directory where `claude` was invoked to find a configuration file.
 
-## Destinations
-- [x] Supports sending to multiple destinations.
+## DataStores
+- [x] Supports sending to multiple dataStores.
 
 ### SQLite
 - [x] Stores data in SQLite database by default.

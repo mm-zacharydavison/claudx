@@ -3,18 +3,16 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execSync } from 'node:child_process';
-import type { ClaudxConfig } from './types.js';
+import type { ClaudxConfig } from './types';
 
 export class ConfigManager {
   private configPath: string;
-  private static configCache: Map<string, ClaudxConfig> = new Map();
-  private static configPromises: Map<string, Promise<ClaudxConfig>> = new Map();
   private defaultConfigTemplate = `// claudx configuration file
 // http://github.com/mm-zacharydavison/claudx
 // This file supports JavaScript expressions and environment variables
 
 export default {
-  destinations: [
+  dataStores: [
     {
       type: 'sqlite',
       options: {
@@ -23,7 +21,7 @@ export default {
       }
     }
     
-    // Example DataDog destination (uncomment and configure):
+    // Example DataDog dataStore (uncomment and configure):
     // {
     //   type: 'datadog',
     //   options: {
@@ -41,10 +39,9 @@ export default {
 };`;
 
   private defaultConfig: ClaudxConfig = {
-    destinations: [
+    dataStores: [
       {
         type: 'sqlite',
-        options: {},
       },
     ],
   };
@@ -95,8 +92,8 @@ export default {
       const config = configModule.default as ClaudxConfig;
 
       // Validate and provide defaults
-      if (!config.destinations || config.destinations.length === 0) {
-        config.destinations = this.defaultConfig.destinations;
+      if (!config.dataStores || config.dataStores.length === 0) {
+        config.dataStores = this.defaultConfig.dataStores;
       }
 
       return config;
@@ -146,7 +143,7 @@ export default {
       this.createDefaultConfig();
       console.log(`[claudx] Created default config file at: ${this.configPath}`);
       console.log(
-        '[claudx] Edit this file to configure your data destinations with environment variables.'
+        '[claudx] Edit this file to configure your data dataStores with environment variables.'
       );
     }
   }

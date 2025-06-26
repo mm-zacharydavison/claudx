@@ -1,11 +1,22 @@
 import type { CommandDescriptor } from "./types";
 
+/**
+ * A list of command line tools and configuration for how they should be saved as metrics.
+ * 
+ * This exists because many tools (e.g. `npm`) are used as tool runners, and collecting metrics for all `npm` invocations as one metric is not useful.
+ * 
+ * Using this list, you can configure how arguments to the tool should be captured as separate tools, so you can get:
+ * - `npm install`
+ * - `npm jest`
+ * 
+ * ...as separate commands in your datastore.
+ */
 export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   // Package managers
-  { command: 'npm', argumentCount: 2 }, // npm install, npm run, npm test
-  { command: 'pnpm', argumentCount: 1 }, // pnpm install, pnpm jest
-  { command: 'yarn', argumentCount: 1 }, // yarn install, yarn build
-  { command: 'bun', argumentCount: 1 }, // bun install, bun run
+  { command: 'npm', argumentCount: 2 }, // npm install, npm run x, npm test
+  { command: 'pnpm', argumentCount: 2 }, // pnpm install, pnpm run x, pnpm jest
+  { command: 'yarn', argumentCount: 2 }, // yarn install, yarn run x, yarn build
+  { command: 'bun', argumentCount: 2 }, // bun install, bun run x, bun run
 
   // Version control
   { command: 'git', argumentCount: 1 }, // git commit, git push, git pull
@@ -45,7 +56,7 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   { command: 'kubectl', argumentCount: 1 }, // kubectl get, kubectl apply
 
   // Text processing (common for development)
-  { command: 'jq', argumentCount: 1 }, // jq '.field', jq 'length'
+  { command: 'jq', argumentCount: 0 }, // jq (arguments come after))
   { command: 'curl', argumentCount: 0 }, // curl (URL and options vary)
   { command: 'wget', argumentCount: 0 }, // wget (URL and options vary)
 

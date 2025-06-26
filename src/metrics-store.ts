@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initSqlJs, { type Database } from 'sql.js';
-import type { MetricsSummary, ToolMetric } from './types.js';
+import type { MetricsSummary, ToolMetric } from './types';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,17 +13,8 @@ export class MetricsStore {
   private dbPath: string;
   private dbPromise: Promise<void>;
 
-  constructor(dbPath?: string) {
-    if (dbPath) {
-      this.dbPath = dbPath;
-    } else {
-      const metricsDir = path.join(homedir(), '.claudx');
-      // Ensure the directory exists
-      if (!existsSync(metricsDir)) {
-        mkdirSync(metricsDir, { recursive: true });
-      }
-      this.dbPath = path.join(metricsDir, 'metrics.db');
-    }
+  constructor(dbPath: string) {
+    this.dbPath = dbPath
     this.dbPromise = this.initializeDatabase();
 
     if (process.env.LOG_LEVEL === 'debug') {

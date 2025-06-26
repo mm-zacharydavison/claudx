@@ -2,7 +2,7 @@
 // This file supports JavaScript expressions and environment variables
 
 module.exports = {
-  destinations: [
+  dataStores: [
     {
       type: 'sqlite',
       options: {
@@ -11,7 +11,7 @@ module.exports = {
       }
     },
 
-    // Datadog destination
+    // Datadog dataStore
     {
       type: 'datadog',
       options: {

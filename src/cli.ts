@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'node:fs';
-import { rmdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+/**
+ * CLI for interacting with `claudx`.
+ * 
+ * Invoke `npm run cli` for usage.
+ */
+
 import { Command } from 'commander';
-import { MetricsManager } from './metrics-manager.js';
-import { MetricsSummary } from './types.js';
+import { MetricsManager } from './metrics-manager';
 
 const program = new Command();
 
@@ -115,9 +116,8 @@ program
 
 program
   .command('config')
-  .description('Manage data destinations configuration')
+  .description('Manage data dataStores configuration')
   .option('--show', 'Show current configuration and config file path')
-  .option('--init', 'Initialize/recreate the configuration file')
   .option('--path', 'Show configuration file path')
   .action(async (options) => {
     const manager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
@@ -129,25 +129,15 @@ program
       return;
     }
 
-    if (options.init) {
-      await configManager.initializeConfig();
-      console.log('Configuration file initialized at:');
-      console.log(configManager.getConfigPath());
-      console.log(
-        '\nEdit this file to configure your data destinations with environment variables.'
-      );
-      return;
-    }
-
     if (options.show) {
       try {
         await manager.initialize();
         const currentConfig = await configManager.getConfig();
 
-        console.log('Current Data Destinations:');
+        console.log('Current Data DataStores:');
         console.log('========================');
 
-        currentConfig.destinations.forEach((dest, index) => {
+        currentConfig.dataStores.forEach((dest, index) => {
           if (dest.options) {
             for (const [key, value] of Object.entries(dest.options)) {
               if (typeof value !== 'string') {
@@ -167,7 +157,6 @@ program
         console.log(configManager.getConfigPath());
       } catch (error) {
         console.error('Error loading configuration:', error);
-        console.log('\nTry running: claudx config --init');
       }
       return;
     }
@@ -177,47 +166,17 @@ program
     console.log('========================');
     console.log('');
     console.log('claudx config --show    Show current configuration');
-    console.log('claudx config --init    Initialize configuration file');
     console.log('claudx config --path    Show configuration file path');
     console.log('');
-    console.log('Edit the configuration file directly to add/remove destinations.');
+    console.log('Edit the configuration file directly to add/remove dataStores.');
     console.log('The file supports JavaScript expressions and environment variables.');
   });
 
-program
-  .command('uninstall')
-  .description('Uninstall by removing the ~/.claudx directory')
-  .option('-y, --yes', 'Skip confirmation prompt')
-  .action(async (options) => {
-    const metricsDir = join(homedir(), '.claudx');
-
-    if (!existsSync(metricsDir)) {
-      console.log('~/.claudx directory does not exist. Nothing to uninstall.');
-      return;
-    }
-
-    if (!options.yes) {
-      const { createInterface } = await import('node:readline/promises');
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      const answer = await rl.question(
-        'Are you sure you want to remove ~/.claudx directory? (y/N) '
-      );
-      rl.close();
-      if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-        console.log('Cancelled.');
-        return;
-      }
-    }
-
-    try {
-      await rmdir(metricsDir, { recursive: true });
-      console.log('[claudx] Successfully removed ~/.claudx directory.');
-    } catch (error) {
-      console.error('[claudx] Failed to remove ~/.claudx directory:', error);
-      process.exit(1);
-    }
-  });
-
+  /**
+   * Pretty prints a 2d table.
+   * @param rows
+   * @returns 
+   */
 function formatTable(rows: string[][]): string {
   if (rows.length === 0) return '';
 
