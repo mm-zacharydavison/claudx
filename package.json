@@ -1,6 +1,6 @@
 {
   "name": "claudx",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "repository": "https://github.com/mm-zacharydavison/claudx",
   "description": "Executable shimming tool for measuring claude-code command execution times",
   "main": "dist/cli.js",

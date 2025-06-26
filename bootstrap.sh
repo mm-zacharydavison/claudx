@@ -167,9 +167,16 @@ setup_path() {
     # Comment out any existing claude alias that might override our PATH entry
     echo "🗑️  Commenting out existing claude alias..."
     if [ -f "$SHELL_RC" ]; then
-        # Comment out lines that set claude alias
-        sed -i 's/^alias claude.*\.claude\/local\/claude/# &/' "$SHELL_RC" 2>/dev/null || true
-        sed -i 's/^alias claude=/# &/' "$SHELL_RC" 2>/dev/null || true
+        # Comment out lines that set claude alias (compatible with both GNU and BSD sed)
+        if sed --version >/dev/null 2>&1; then
+            # GNU sed (Linux)
+            sed -i 's/^alias claude.*\.claude\/local\/claude/# &/' "$SHELL_RC" 2>/dev/null || true
+            sed -i 's/^alias claude=/# &/' "$SHELL_RC" 2>/dev/null || true
+        else
+            # BSD sed (macOS)
+            sed -i '' 's/^alias claude.*\.claude\/local\/claude/# &/' "$SHELL_RC" 2>/dev/null || true
+            sed -i '' 's/^alias claude=/# &/' "$SHELL_RC" 2>/dev/null || true
+        fi
         echo "✅ Commented out existing claude aliases"
     fi
     
