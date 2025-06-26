@@ -126,16 +126,10 @@ ensure_shims_updated() {
     echo "[claudx] 🔍 Checking for shim updates..." >&2
     
     # Run the auto-shim manager using the bundled JS file
-    if [ "\$SHIM_ALL_FLAG" = "true" ]; then
-        # No timeout for full shim mode
-        node "\$AUTO_SHIM_SOURCE" "\$METRICS_DIR" \$SHIM_ALL_FLAG >&2 || echo "⚠️  Shim update failed" >&2
-    else
-        # Use timeout for quick mode to prevent hanging
-        timeout 30s node "\$AUTO_SHIM_SOURCE" "\$METRICS_DIR" \$SHIM_ALL_FLAG >&2 || echo "⚠️  Shim update timed out or failed" >&2
-    fi
+    node "\$AUTO_SHIM_SOURCE" "\$METRICS_DIR" \$SHIM_ALL_FLAG >&2 || echo "⚠️  Shim update failed" >&2
 }
 
-# Ensure shims are current (run synchronously but with timeout)
+# Ensure shims are current
 ensure_shims_updated
 
 # Add shim directory to PATH for this execution only
