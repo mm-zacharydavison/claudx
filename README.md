@@ -1,4 +1,4 @@
-# `claudx`
+# 📈🤖`claudx`
 
 A tool that automatically measures and tracks execution times for commands used by Claude Code.
 We wrote this tool so we could understand where developers were getting bottlenecked when using Claude Code.
