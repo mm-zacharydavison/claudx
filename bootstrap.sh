@@ -178,9 +178,36 @@ setup_path() {
     fi
 }
 
+# Check if prior installation exists
+check_existing_installation() {
+    local has_installation=false
+    
+    # Check for installation directory
+    if [ -d "$INSTALL_DIR" ]; then
+        has_installation=true
+    fi
+    
+    # Check for claudx in shell configs, excluding backup files
+    local shell_configs=("$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.config/fish/config.fish" "$HOME/.profile")
+    for config in "${shell_configs[@]}"; do
+        if [ -f "$config" ] && [[ "$config" != *.claudx-backup ]] && grep -q "claudx" "$config" 2>/dev/null; then
+            has_installation=true
+            break
+        fi
+    done
+    
+    if [ "$has_installation" = true ]; then
+        echo "🔍 Found existing claudx installation"
+        echo "🧹 Running uninstaller to clean up..."
+        ./uninstall.sh
+    else
+        echo "✅ No existing installation found"
+    fi
+}
+
 # Main installation process
 main() {
-    ./uninstall.sh
+    check_existing_installation
     find_claude_code
     setup_directories
     build_system
