@@ -1,5 +1,8 @@
 import type { DataStoreConfigOptions } from "./datastore";
 
+/**
+ * A metric set for a given tool (e.g. `pnpm`)
+ */
 export interface ToolMetric {
   id: string;
   toolName: string;
@@ -15,8 +18,20 @@ export interface ToolMetric {
   totalTokens: number;
 }
 
+/**
+ * A description of a command, used to decide how many 'words' define a command.
+ * 
+ * e.g. `pnpm install` is 1 command.
+ */
 export interface CommandDescriptor {
+  /**
+   * The base command name.
+   * @example `pnpm`.
+   */
   command: string;
+  /**
+   * The number of arguments after the base command that should be included in the command name.
+   */
   argumentCount: number;
 }
 

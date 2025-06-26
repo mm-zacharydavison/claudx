@@ -2,7 +2,7 @@
 // This file supports JavaScript expressions and environment variables
 
 module.exports = {
-  dataStores: [
+  datastores: [
     {
       type: 'sqlite',
       options: {

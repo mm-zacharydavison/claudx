@@ -2,7 +2,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { CLAUDE_TOOLS_WHITELIST } from './claude-tools-whitelist';
+import { CLAUDE_TOOLS_WHITELIST } from './constants/claude-tools-whitelist';
 import { MetricsManager } from './metrics-manager';
 import { ShimManager } from './shim-manager';
 
@@ -58,7 +58,7 @@ export class AutoShimManager {
 
     const metricsManager = new MetricsManager(undefined, process.env.CLAUDX_ORIGINAL_CWD);
     await metricsManager.initialize();
-    const manager = new ShimManager(metricsManager, path.dirname(this.shimDir));
+    const manager = new ShimManager(path.dirname(this.shimDir));
 
     try {
       if (this.shimAll) {

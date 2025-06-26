@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import type { ClaudxConfig } from './types';
 
 export class ConfigManager {
@@ -12,7 +13,7 @@ export class ConfigManager {
 // This file supports JavaScript expressions and environment variables
 
 export default {
-  dataStores: [
+  datastores: [
     {
       type: 'sqlite',
       options: {
@@ -21,7 +22,7 @@ export default {
       }
     }
     
-    // Example DataDog dataStore (uncomment and configure):
+    // Example DataDog datastore (uncomment and configure):
     // {
     //   type: 'datadog',
     //   options: {
@@ -39,7 +40,7 @@ export default {
 };`;
 
   private defaultConfig: ClaudxConfig = {
-    dataStores: [
+    datastores: [
       {
         type: 'sqlite',
       },
@@ -56,19 +57,31 @@ export default {
       const homeDirConfig = join(homedir(), '.claudx');
 
       let configDir: string;
+      let configFileName: string;
+      
       if (existsSync(join(currentDirConfig, 'claudx.config.js'))) {
         configDir = currentDirConfig;
+        configFileName = 'claudx.config.js';
+      } else if (existsSync(join(currentDirConfig, 'claudx.config.cjs'))) {
+        configDir = currentDirConfig;
+        configFileName = 'claudx.config.cjs';
       } else if (gitRootConfig && existsSync(join(gitRootConfig, 'claudx.config.js'))) {
         configDir = gitRootConfig;
+        configFileName = 'claudx.config.js';
+      } else if (gitRootConfig && existsSync(join(gitRootConfig, 'claudx.config.cjs'))) {
+        configDir = gitRootConfig;
+        configFileName = 'claudx.config.cjs';
       } else if (existsSync(homeDirConfig)) {
         configDir = homeDirConfig;
+        configFileName = 'claudx.config.js';
       } else {
         // Default to current directory if no config found
         configDir = currentDirConfig;
+        configFileName = 'claudx.config.js';
         mkdirSync(configDir, { recursive: true });
       }
 
-      this.configPath = join(configDir, 'claudx.config.js');
+      this.configPath = join(configDir, configFileName);
       if (process.env.LOG_LEVEL === 'debug') {
         console.debug(`[claudx] Using config ${this.configPath}`)
       }
@@ -86,14 +99,23 @@ export default {
     }
 
     try {
-      // Use dynamic import to load the config
-      const configUrl = pathToFileURL(this.configPath).href;
-      const configModule = await import(`${configUrl}?t=${Date.now()}`);
-      const config = configModule.default as ClaudxConfig;
+      let config: ClaudxConfig;
+      
+      if (this.configPath.endsWith('.cjs')) {
+        // For CommonJS files, use require
+        const require = createRequire(import.meta.url);
+        delete require.cache[require.resolve(this.configPath)];
+        config = require(this.configPath);
+      } else {
+        // Use dynamic import to load the config
+        const configUrl = pathToFileURL(this.configPath).href;
+        const configModule = await import(`${configUrl}?t=${Date.now()}`);
+        config = configModule.default as ClaudxConfig;
+      }
 
       // Validate and provide defaults
-      if (!config.dataStores || config.dataStores.length === 0) {
-        config.dataStores = this.defaultConfig.dataStores;
+      if (!config.datastores || config.datastores.length === 0) {
+        config.datastores = this.defaultConfig.datastores;
       }
 
       return config;
@@ -143,7 +165,7 @@ export default {
       this.createDefaultConfig();
       console.log(`[claudx] Created default config file at: ${this.configPath}`);
       console.log(
-        '[claudx] Edit this file to configure your data dataStores with environment variables.'
+        '[claudx] Edit this file to configure your datastores with environment variables.'
       );
     }
   }

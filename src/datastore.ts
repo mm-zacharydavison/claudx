@@ -3,6 +3,9 @@ import type { MetricsSummary, ToolMetric } from './types';
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 
+/**
+ * An endpoint where data is stored (e.g. sqlite, DataDog).
+ */
 export interface DataStore {
   /**
    * Saves a metric to the backing store.
