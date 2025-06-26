@@ -42,8 +42,7 @@ e.g:
 ### Quick Setup (Recommended)
 
 ```bash
-npm install
-npm run bootstrap
+npx claudx bootstrap
 ```
 
 This creates shims for common development tools that Claude frequently uses (~100 tools).
@@ -52,7 +51,7 @@ This creates shims for common development tools that Claude frequently uses (~10
 
 ```bash
 # Remove claudx (uninstall)
-npm run uninstall
+npx claudx uninstall
 ```
 
 ### Complete Coverage Setup
@@ -61,8 +60,7 @@ This will shim all tools on your PATH.
 This isn't recommended, as you probably have around 3000+ tools on your PATH.
 
 ```bash
-npm install
-npm run bootstrap:all
+npx claudx bootstrap:all
 ```
 
 This discovers and shims ALL executables on your PATH (~3000+ tools) - slower but provides complete coverage.

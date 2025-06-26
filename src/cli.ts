@@ -37,6 +37,7 @@ program
     try {
       await fs.copyFile(path.join(distDir, 'metrics-collector.js'), path.join(installDir, 'metrics-collector.js'));
       await fs.copyFile(path.join(distDir, 'auto-shim.js'), path.join(installDir, 'auto-shim.js'));
+      await fs.copyFile(path.join(__dirname, '..', 'uninstall.sh'), path.join(installDir, 'uninstall.sh'));
       
       // Create package.json in ~/.claudx to enable ES modules
       await fs.writeFile(path.join(installDir, 'package.json'), JSON.stringify({ type: 'module' }, null, 2));
@@ -50,6 +51,43 @@ program
     const child = spawn('bash', [scriptPath, ...args], {
       stdio: 'inherit',
       cwd: path.dirname(__dirname)
+    });
+    
+    child.on('exit', (code) => {
+      process.exit(code || 0);
+    });
+  });
+
+program
+  .command('uninstall')
+  .description('Uninstall claudx shims and restore original claude')
+  .action(async () => {
+    const { spawn } = await import('child_process');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    
+    // Get the directory where this script is located
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    
+    // Try to use uninstall.sh from ~/.claudx first, then fall back to package
+    const installDir = path.join(process.env.HOME || '/tmp', '.claudx');
+    const localUninstallScript = path.join(installDir, 'uninstall.sh');
+    const packageUninstallScript = path.join(__dirname, '..', 'uninstall.sh');
+    
+    const fs = await import('fs/promises');
+    let scriptPath: string;
+    
+    try {
+      await fs.access(localUninstallScript);
+      scriptPath = localUninstallScript;
+    } catch {
+      scriptPath = packageUninstallScript;
+    }
+    
+    const child = spawn('bash', [scriptPath], {
+      stdio: 'inherit',
+      cwd: path.dirname(scriptPath)
     });
     
     child.on('exit', (code) => {

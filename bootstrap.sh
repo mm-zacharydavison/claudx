@@ -82,6 +82,7 @@ build_system() {
     echo "📦 Copying runtime files to ~/.claudx..."
     cp dist/metrics-collector.js "$INSTALL_DIR/"
     cp dist/auto-shim.js "$INSTALL_DIR/"
+    cp uninstall.sh "$INSTALL_DIR/"
     
     # Create package.json in ~/.claudx to enable ES modules
     cat > "$INSTALL_DIR/package.json" << 'EOF'
