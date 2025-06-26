@@ -200,10 +200,9 @@ export class ShimManager {
    * @returns - The raw string content of the shim.
    */
   private generateShimScript(executable: string, originalPath: string): string {
-    // In ES modules, __dirname is not available, so we need to construct the path differently
-    const currentFile = new URL(import.meta.url).pathname;
-    const currentDir = path.dirname(currentFile);
-    const metricsCollectorPath = path.resolve(currentDir, '../dist/metrics-collector.js');
+    // Use metrics collector from ~/.claudx directory
+    const claudxDir = path.join(process.env.HOME || '/tmp', '.claudx');
+    const metricsCollectorPath = path.join(claudxDir, 'metrics-collector.js');
 
     return `#!/bin/bash
 # claudx shim for ${executable}

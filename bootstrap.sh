@@ -77,6 +77,18 @@ build_system() {
     echo "🔨 Building metrics collection system..."
     npm install
     npm run build
+    
+    # Copy dist files to ~/.claudx for runtime access
+    echo "📦 Copying runtime files to ~/.claudx..."
+    cp dist/metrics-collector.js "$INSTALL_DIR/"
+    cp dist/auto-shim.js "$INSTALL_DIR/"
+    
+    # Create package.json in ~/.claudx to enable ES modules
+    cat > "$INSTALL_DIR/package.json" << 'EOF'
+{
+  "type": "module"
+}
+EOF
     echo "✅ System built successfully"
 }
 
@@ -89,7 +101,7 @@ create_claude_shim() {
     
     # Get the absolute path to our source files
     METRICS_COLLECTOR_PATH="$(pwd)/dist/metrics-collector.js"
-    AUTO_SHIM_SOURCE="$(pwd)/src/auto-shim.ts"
+    AUTO_SHIM_SOURCE="$INSTALL_DIR/auto-shim.js"
     PROJECT_DIR="$(pwd)"
     
     # Create the claude shim script
@@ -112,13 +124,13 @@ export CLAUDX_ORIGINAL_CWD="\$PWD"
 ensure_shims_updated() {
     echo "[claudx] 🔍 Checking for shim updates..." >&2
     
-    # Run the auto-shim manager using tsx to handle native modules
+    # Run the auto-shim manager using the bundled JS file
     if [ "\$SHIM_ALL_FLAG" = "true" ]; then
         # No timeout for full shim mode
-        cd "\$PROJECT_DIR" && node --import tsx "\$AUTO_SHIM_SOURCE" '$INSTALL_DIR' \$SHIM_ALL_FLAG >&2 || echo "⚠️  Shim update failed" >&2
+        node "\$AUTO_SHIM_SOURCE" "\$METRICS_DIR" \$SHIM_ALL_FLAG >&2 || echo "⚠️  Shim update failed" >&2
     else
         # Use timeout for quick mode to prevent hanging
-        timeout 30s bash -c "cd '\$PROJECT_DIR' && node --import tsx '\$AUTO_SHIM_SOURCE' '$INSTALL_DIR' \$SHIM_ALL_FLAG" >&2 || echo "⚠️  Shim update timed out or failed" >&2
+        timeout 30s node "\$AUTO_SHIM_SOURCE" "\$METRICS_DIR" \$SHIM_ALL_FLAG >&2 || echo "⚠️  Shim update timed out or failed" >&2
     fi
 }
 

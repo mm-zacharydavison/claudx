@@ -14,6 +14,50 @@ const program = new Command();
 program.name('claudx').description('View claudx tool execution metrics').version('1.0.0');
 
 program
+  .command('bootstrap')
+  .description('Install claudx shims for claude-code metrics collection')
+  .option('--shim-all', 'Shim all executables on PATH (slower but complete coverage)')
+  .action(async (options) => {
+    const { spawn } = await import('child_process');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    const fs = await import('fs/promises');
+    
+    // Get the directory where this script is located
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    
+    // Setup ~/.claudx directory and copy necessary files
+    const installDir = path.join(process.env.HOME || '/tmp', '.claudx');
+    await fs.mkdir(installDir, { recursive: true });
+    
+    // Copy dist files to ~/.claudx for runtime access
+    console.log('📦 Copying runtime files to ~/.claudx...');
+    const distDir = path.join(__dirname);
+    try {
+      await fs.copyFile(path.join(distDir, 'metrics-collector.js'), path.join(installDir, 'metrics-collector.js'));
+      await fs.copyFile(path.join(distDir, 'auto-shim.js'), path.join(installDir, 'auto-shim.js'));
+      
+      // Create package.json in ~/.claudx to enable ES modules
+      await fs.writeFile(path.join(installDir, 'package.json'), JSON.stringify({ type: 'module' }, null, 2));
+    } catch (error) {
+      console.error('❌ Failed to copy runtime files:', error);
+      process.exit(1);
+    }
+    
+    const scriptPath = path.join(__dirname, '..', 'bootstrap.sh');
+    const args = options.shimAll ? ['--shim-all'] : [];
+    const child = spawn('bash', [scriptPath, ...args], {
+      stdio: 'inherit',
+      cwd: path.dirname(__dirname)
+    });
+    
+    child.on('exit', (code) => {
+      process.exit(code || 0);
+    });
+  });
+
+program
   .command('summary')
   .description('Show summary of tool execution metrics')
   .option('-l, --limit <number>', 'Limit number of tools shown', '10')

@@ -1,7 +1,7 @@
 # Specification
 
 ## Installation
-- [x] Can be installed in one command.
+- [x] Can be installed in one command (`npx claudx bootstrap`).
 - [x] Can be uninstalled in one command.
 
 ## Integration
